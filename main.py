@@ -116,6 +116,8 @@ def main():
         criterion = nn.BCELoss()
     elif args.loss_function == "dice" :
         criterion = DiceLoss().cuda()
+    elif args.loss_function == "cross_entorpy" :
+        criterion = nn.CrossEntropyLoss()
     else :
         raise NotImplementedError
     
