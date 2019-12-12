@@ -109,7 +109,7 @@ class Unet2D(nn.Module):
         if self.padding == 0:
             out = self.output_up_seg_map(out)
 
-        return out, x_bottom_block
+        return out
 
 if __name__ == '__main__':
     pass

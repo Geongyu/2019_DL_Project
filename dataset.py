@@ -50,14 +50,14 @@ class voc_cls(Dataset):
     def __getitem__(self, idx) :
         img = self.datasets[idx]
         img_path = self.path 
-        imgs = path + img[0] + ".jpg"
+        imgs = img_path + img[0] + ".jpg"
 
         image = cv2.imread(imgs)
         image = cv2.resize(image, (224, 224))
         image = self.transform_1(image)
 
         label = torch.tensor(img[1])
-        
+
         return image, label 
     
     def get_classes(self) :
