@@ -89,7 +89,9 @@ def main():
         testset = torchvision.datasets.VOCSegmentation("./seg_da/", year='2010', image_set='val', 
                                                download=True, transform=transform, target_transform=transform)
     elif args.mode == "Classification" :
-        pass
+        info_path = "./VOCdevkit/VOC2010/ImageSets/Main"
+        image_path = "./VOCdevkit/VOC2010/JPEGImages"
+        trainset = dataset.voc_cls(info_path, image_path)
     else : 
         raise NotImplementedError
 
