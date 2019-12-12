@@ -15,11 +15,13 @@ from torchsummary import summary
 import torchvision 
 import torch.backends.cudnn as cudnn
 from unet import Unet2D
+from losses import DiceLoss
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", default="Segmentation", type=str, help="Task Type, For example Segmentation or Classification")
 parser.add_argument("--optim", default="Adam", type=str, help="Optimizers")
 parser.add_argument("--loss-function", default="BCE", type=str)
+parser.add_argument("--epochs", default=50, type=int)
 args = parser.parse_args()
 
 def train(model, trn_loader, criterion, optimizer, epoch):
@@ -113,13 +115,16 @@ def main():
     if args.loss_function == "bce" :
         criterion = nn.BCELoss()
     elif args.loss_function == "dice" :
-        criterion = DiceLoss.cuda()
+        criterion = DiceLoss().cuda()
     else :
         raise NotImplementedError
-
-
-
     
+    losses = []
+    val_losses = []
+    for epoch in range(args.epochs) : 
+        train(net, trainloader, criterion, optimizer, epoch)
+        validate(net, testloader, criterion, epoch)
+
     return losses, val_losses
 
 
