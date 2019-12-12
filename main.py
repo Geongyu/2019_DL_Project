@@ -10,15 +10,19 @@ import torchvision.transforms as transforms
 from torchvision.datasets import voc
 import os 
 import argparse
+from optimizers import RAdam
 from torchsummary import summary
 import torchvision 
+import torch.backends.cudnn as cudnn
+from unet import Unet2D
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", default="Segmentation", type=str, help="Task Type, For example Segmentation or Classification")
 parser.add_argument("--optim", default="Adam", type=str, help="Optimizers")
+parser.add_argument("--loss-function", default="BCE", type=str)
 args = parser.parse_args()
 
-def train(model, trn_loader, device, criterion, optimizer, epoch):
+def train(model, trn_loader, criterion, optimizer, epoch):
     trn_loss = 0
     start_time = time.time()
 
@@ -46,7 +50,7 @@ def train(model, trn_loader, device, criterion, optimizer, epoch):
 
     return trn_loss
 
-def validate(model, val_loader, device, criterion, epoch):
+def validate(model, val_loader, criterion, epoch):
     model.eval()
     val_loss = 0 
     start_time = time.time()
@@ -89,6 +93,31 @@ def main():
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
     testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=False)
+
+    if args.mode == "Segmentation" :
+        net = torchvision.models.resnet50(pretrained=False, num_classes=20)
+    elif args.mode == "Classification" :
+        net = Unet2D((3, 224, 224), 1, 0.1)
+    else : 
+        raise NotImplementedError
+
+    if args.optim == 'sgd' :
+        optimizer = torch.optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
+    elif args.optim == 'adam' :
+        optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
+    elif args.optim == 'radam' :
+        optimizer = RAdam(net.parameters(), lr = 0.0001)
+
+    net = nn.DataParallel(net).cuda()
+    cudnn.benchmark = True
+    if args.loss_function == "bce" :
+        criterion = nn.BCELoss()
+    elif args.loss_function == "dice" :
+        criterion = DiceLoss.cuda()
+    else :
+        raise NotImplementedError
+
+
 
     
     return losses, val_losses
