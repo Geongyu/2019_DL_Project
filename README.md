@@ -10,7 +10,7 @@ Classification/Detection Tasks
                   train	           val	         trainval <br>
               Images	Objects	Images	Objects	Images	Objects <br>
 |---|---|---|---|
-Aeroplane|283|369|296|369|579|738| <br>
+|Aeroplane|283|369|296|369|579|738| <br>
 Bicycle|	       228|	    305	   243	   309	   471	    614 <br>
 Bird|	         340|	    486	   326	   485	   666	    971	<br>
 Boat|	         222|	    345	   210	   342	   432	    687	<br>
