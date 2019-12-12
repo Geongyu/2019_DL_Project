@@ -10,12 +10,12 @@ import torchvision.transforms as transforms
 from torchvision.datasets import voc
 import os 
 import argparse
-from optimizers import RAdam
+from utils.optimizers import RAdam
 from torchsummary import summary
 import torchvision 
 import torch.backends.cudnn as cudnn
-from unet import Unet2D
-from losses import DiceLoss
+from models.unet import Unet2D
+from utils.losses import DiceLoss
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", default="Segmentation", type=str, help="Task Type, For example Segmentation or Classification")
