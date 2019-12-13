@@ -10,17 +10,17 @@ import torchvision.transforms as transforms
 from torchvision.datasets import voc
 import os 
 import argparse
-from utils.optimizers import RAdam
+from optimizers import RAdam
 from torchsummary import summary
 import torchvision 
 import torch.backends.cudnn as cudnn
-from models.unet import Unet2D
-from utils.losses import DiceLoss
+from unet import Unet2D
+from losses import DiceLoss
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", default="Segmentation", type=str, help="Task Type, For example Segmentation or Classification")
-parser.add_argument("--optim", default="Adam", type=str, help="Optimizers")
-parser.add_argument("--loss-function", default="BCE", type=str)
+parser.add_argument("--optim", default="adam", type=str, help="Optimizers")
+parser.add_argument("--loss-function", default="bce", type=str)
 parser.add_argument("--epochs", default=50, type=int)
 args = parser.parse_args()
 
@@ -31,6 +31,7 @@ def train(model, trn_loader, criterion, optimizer, epoch):
     for i, (image, target) in enumerate(trn_loader) :
         model.train()
         x = image.cuda()
+        #import ipdb; ipdb.set_trace()
         y = target.cuda()
         
         y_pred = model(x)
@@ -85,9 +86,9 @@ def main():
             transforms.ToTensor()
         ])
         trainset = torchvision.datasets.VOCSegmentation("./seg_da/", year='2010', image_set='train', 
-                                                download=True, transform=transform, target_transform=transform)
+                                                download=False, transform=transform, target_transform=transform)
         testset = torchvision.datasets.VOCSegmentation("./seg_da/", year='2010', image_set='val', 
-                                               download=True, transform=transform, target_transform=transform)
+                                               download=False, transform=transform, target_transform=transform)
     elif args.mode == "Classification" :
         info_path = "./VOCdevkit/VOC2010/ImageSets/Main"
         image_path = "./VOCdevkit/VOC2010/JPEGImages"
@@ -99,9 +100,9 @@ def main():
     testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=False)
 
     if args.mode == "Segmentation" :
-        net = torchvision.models.resnet50(pretrained=False, num_classes=20)
-    elif args.mode == "Classification" :
         net = Unet2D((3, 224, 224), 1, 0.1)
+    elif args.mode == "Classification" :
+        net = torchvision.models.resnet50(pretrained=False, num_classes=20)
     else : 
         raise NotImplementedError
 
@@ -114,12 +115,13 @@ def main():
 
     net = nn.DataParallel(net).cuda()
     cudnn.benchmark = True
+
     if args.loss_function == "bce" :
-        criterion = nn.BCELoss()
+        criterion = nn.BCEWithLogitsLoss().cuda()
     elif args.loss_function == "dice" :
         criterion = DiceLoss().cuda()
     elif args.loss_function == "cross_entorpy" :
-        criterion = nn.CrossEntropyLoss()
+        criterion = nn.CrossEntropyLoss().cuda()
     else :
         raise NotImplementedError
     
@@ -133,5 +135,6 @@ def main():
 
 
 if __name__ == '__main__':
+    main()
     import ipdb; ipdb.set_trace()
     
