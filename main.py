@@ -1,9 +1,11 @@
 import dataset
 from tqdm import tqdm 
 import torch 
+import copy
 import time
 import string
-from torch import nn 
+from torch import nn
+from torch.autograd import Variable
 from torch.utils import data as da 
 from torch.utils.data.sampler import SubsetRandomSampler
 import torchvision.transforms as transforms
@@ -15,6 +17,7 @@ from torchsummary import summary
 import torchvision 
 import torch.backends.cudnn as cudnn
 from unet import Unet2D
+from utils import optimize_linear
 from losses import DiceLoss
 from medpy.metric import binary
 from sklearn.metrics import accuracy_score
@@ -24,9 +27,10 @@ parser.add_argument("--mode", default="segmentation", type=str, help="Task Type,
 parser.add_argument("--optim", default="adam", type=str, help="Optimizers")
 parser.add_argument("--loss-function", default="cross_entropy", type=str)
 parser.add_argument("--epochs", default=50, type=int)
+parser.add_argument('--method', default="adv", type=str)
 args = parser.parse_args()
 
-def train(model, trn_loader, criterion, optimizer, epoch, mode="segmentation"):
+def train(model, trn_loader, criterion, criterion_fn, optimizer, epoch, mode="segmentation"):
     trn_loss = 0
     start_time = time.time()
     sum_iou = 0 
@@ -42,6 +46,27 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="segmentation"):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        
+        if args.method == 'adv':
+            # calculate gradients of the inputs
+            ## make copies of the inputs, the model, the loss function to prevent unexpected effect to the model
+            x_clone = Variable(x.clone().detach(), requires_grad=True).cuda()
+            model_fn = copy.deepcopy(model)
+            loss_fn = criterion_fn(model_fn(x_clone), y)
+            
+            optimizer.zero_grad()
+            loss_fn.backward()
+            
+            grads = x_clone.grad
+            
+            # calculate perturbations of the inputs
+            scaled_perturbation = optimize_linear(grads, eps=0.25, norm=np.inf)
+            # make adversarial samples
+            adv_x = Variable(x_clone+scaled_perturbation, requries_grad=True).cuda()
+            
+            # if you want to use adv_x when train the model, set x = adv_x
+            # x = adv_x
+        
         if mode == "segmentation" : 
             #iou = binary.jc(target.cpu().numpy(), y_pred.detach().cpu().numpy())
             #sum_iou += iou 
@@ -166,10 +191,13 @@ def main():
 
     if args.loss_function == "bce" :
         criterion = nn.BCEWithLogitsLoss().cuda()
+        criterion_fn = nn.BCEWithLogitsLoss().cuda()
     elif args.loss_function == "dice" :
         criterion = DiceLoss().cuda()
+        criterion_fn = DiceLoss().cuda()
     elif args.loss_function == "cross_entropy" :
         criterion = nn.CrossEntropyLoss().cuda()
+        criterion_fn = nn.CrossEntropyLoss().cuda()
     else :
         raise NotImplementedError
     
