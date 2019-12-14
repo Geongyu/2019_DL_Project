@@ -16,6 +16,8 @@ import torchvision
 import torch.backends.cudnn as cudnn
 from unet import Unet2D
 from losses import DiceLoss
+from sklearn.metrics import jaccard_similarity_score as jsc
+from sklearn.metrics import accuracy_score
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", default="Segmentation", type=str, help="Task Type, For example Segmentation or Classification")
@@ -24,10 +26,11 @@ parser.add_argument("--loss-function", default="bce", type=str)
 parser.add_argument("--epochs", default=50, type=int)
 args = parser.parse_args()
 
-def train(model, trn_loader, criterion, optimizer, epoch):
+def train(model, trn_loader, criterion, optimizer, epoch, mode="segmentation"):
     trn_loss = 0
     start_time = time.time()
-
+    sum_iou = 0 
+    sum_acc = 0 
     for i, (image, target) in enumerate(trn_loader) :
         model.train()
         x = image.cuda()
@@ -40,20 +43,35 @@ def train(model, trn_loader, criterion, optimizer, epoch):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        if mode == "segmentation" : 
+            iou = jsc(target, y_pred)
+            sum_iou += iou 
+            measure = iou 
+        elif mode == "classification" :
+            acc = accuracy_score(target, y_pred)
+            sum_acc += acc 
+            measure = acc
 
         trn_loss += (loss)
         end_time = time.time()
-        print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}]".format(epoch, i, len(trn_loader), loss.item(), end_time-start_time))
+        print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{5:.3f}]".format(epoch, i, len(trn_loader), loss.item(), end_time-start_time, measure))
         start_time = time.time()
 
     trn_loss = trn_loss/len(trn_loader)
+    if mode == "segmentation" : 
+        total_iou = sum_iou / len(trn_loader)
+        total_measure = total_iou
+    elif mode == "classification" :
+        total_acc = sum_acc / len(trn_loader)
+        total_measure = total_acc
 
+    # 모델 저장기준 수정해야함 (14 이건규)
     if epoch == 50 : 
         torch.save(model.state_dict(), '{0}{1}_{2}.pth'.format("./", 'model', epoch))
 
-    return trn_loss
+    return trn_loss, total_measure
 
-def validate(model, val_loader, criterion, epoch):
+def validate(model, val_loader, criterion, epoch, mode="Segmentation"):
     model.eval()
     val_loss = 0 
     start_time = time.time()
@@ -66,14 +84,29 @@ def validate(model, val_loader, criterion, epoch):
             y_pred = model(x)
             loss = criterion(y_pred, y)
             val_loss += (loss)
+            if mode == "segmentation" : 
+                iou = jsc(target, y_pred)
+                sum_iou += iou 
+                measure = iou 
+            elif mode == "classification" :
+                acc = accuracy_score(target, y_pred)
+                sum_acc += acc 
+                measure = acc
             end_time = time.time()
-            print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}]".format(epoch, i, len(val_loader), loss.item(), end_time-start_time))
+            print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), loss.item(), end_time-start_time, measure))
             start_time = time.time()
+    
+    if mode == "segmentation" : 
+        total_iou = sum_iou / len(val_loader)
+        total_measure = total_iou
+    elif mode == "classification" :
+        total_acc = sum_acc / len(val_loader)
+        total_measure = total_acc
 
     # write your codes here
     val_loss = val_loss / len(val_loader)
 
-    return val_loss
+    return val_loss, total_measure
 
 def draw_plot(real_photo, segmentationmap, predict_map) :
     import matplotlib.pyplot as plt 
@@ -135,6 +168,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    tr_loss, val_loss = main()
     import ipdb; ipdb.set_trace()
     
