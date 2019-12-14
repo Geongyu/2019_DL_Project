@@ -16,13 +16,13 @@ import torchvision
 import torch.backends.cudnn as cudnn
 from unet import Unet2D
 from losses import DiceLoss
-from sklearn.metrics import jaccard_similarity_score as jsc
+from medpy.metric import binary
 from sklearn.metrics import accuracy_score
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--mode", default="Segmentation", type=str, help="Task Type, For example Segmentation or Classification")
+parser.add_argument("--mode", default="segmentation", type=str, help="Task Type, For example Segmentation or Classification")
 parser.add_argument("--optim", default="adam", type=str, help="Optimizers")
-parser.add_argument("--loss-function", default="bce", type=str)
+parser.add_argument("--loss-function", default="cross_entropy", type=str)
 parser.add_argument("--epochs", default=50, type=int)
 args = parser.parse_args()
 
@@ -34,33 +34,45 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="segmentation"):
     for i, (image, target) in enumerate(trn_loader) :
         model.train()
         x = image.cuda()
-        #import ipdb; ipdb.set_trace()
         y = target.cuda()
         
         y_pred = model(x)
-        loss = criterion(y_pred, y)
+        loss = criterion(y_pred, y.long())
         
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         if mode == "segmentation" : 
-            iou = jsc(target, y_pred)
-            sum_iou += iou 
-            measure = iou 
+            #iou = binary.jc(target.cpu().numpy(), y_pred.detach().cpu().numpy())
+            #sum_iou += iou 
+            #measure = iou 
+            if epoch == 30 :
+                from PIL import Image 
+                palette = torch.tensor([2 ** 25 - 1, 2 ** 15 - 1, 2 ** 21 - 1])
+                colors = torch.as_tensor([i for i in range(21)])[:, None] * palette
+                colors = (colors % 255).numpy().astype("uint8")
+                #import ipdb; ipdb.set_trace()
+                r = Image.fromarray(y_pred[0].byte().cpu().numpy().astype("uint8").reshape(224, 224))
+                r.putpalette(colors)
+                r.save("test3.png") 
+                import ipdb; ipdb.set_trace()
+            #import ipdb; ipdb.set_trace()
+
         elif mode == "classification" :
-            acc = accuracy_score(target, y_pred)
+            acc = accuracy_score(target.detach().cpu().numpy(), y_pred.detach().cpu().numpy())
             sum_acc += acc 
             measure = acc
 
         trn_loss += (loss)
         end_time = time.time()
-        print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{5:.3f}]".format(epoch, i, len(trn_loader), loss.item(), end_time-start_time, measure))
+        print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{4:.3f}]".format(epoch, i, len(trn_loader), loss.item(), end_time-start_time))
         start_time = time.time()
 
     trn_loss = trn_loss/len(trn_loader)
     if mode == "segmentation" : 
-        total_iou = sum_iou / len(trn_loader)
-        total_measure = total_iou
+        #total_iou = sum_iou / len(trn_loader)
+        #total_measure = total_iou
+        pass
     elif mode == "classification" :
         total_acc = sum_acc / len(trn_loader)
         total_measure = total_acc
@@ -69,11 +81,12 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="segmentation"):
     if epoch == 50 : 
         torch.save(model.state_dict(), '{0}{1}_{2}.pth'.format("./", 'model', epoch))
 
-    return trn_loss, total_measure
+    return trn_loss#, total_measure
 
-def validate(model, val_loader, criterion, epoch, mode="Segmentation"):
+def validate(model, val_loader, criterion, epoch, mode="segmentation"):
     model.eval()
     val_loss = 0 
+    sum_iou = 0 
     start_time = time.time()
     with torch.no_grad() :
         for i, (data, target) in enumerate(val_loader) :
@@ -85,20 +98,22 @@ def validate(model, val_loader, criterion, epoch, mode="Segmentation"):
             loss = criterion(y_pred, y)
             val_loss += (loss)
             if mode == "segmentation" : 
-                iou = jsc(target, y_pred)
-                sum_iou += iou 
-                measure = iou 
+                #iou = binary.jc(target.cpu().numpy(), y_pred.detach().cpu().numpy())
+                #sum_iou += iou 
+                #measure = iou 
+                pass
             elif mode == "classification" :
-                acc = accuracy_score(target, y_pred)
+                acc = accuracy_score(target.cpu().numpy(), y_pred.detach().cpu().numpy())
                 sum_acc += acc 
                 measure = acc
             end_time = time.time()
-            print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), loss.item(), end_time-start_time, measure))
+            print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{4:.3f}]".format(epoch, i, len(val_loader), loss.item(), end_time-start_time))
             start_time = time.time()
     
     if mode == "segmentation" : 
-        total_iou = sum_iou / len(val_loader)
-        total_measure = total_iou
+        #total_iou = sum_iou / len(val_loader)
+        #total_measure = total_iou
+        pass
     elif mode == "classification" :
         total_acc = sum_acc / len(val_loader)
         total_measure = total_acc
@@ -106,22 +121,22 @@ def validate(model, val_loader, criterion, epoch, mode="Segmentation"):
     # write your codes here
     val_loss = val_loss / len(val_loader)
 
-    return val_loss, total_measure
+    return val_loss #, total_measure
 
 def draw_plot(real_photo, segmentationmap, predict_map) :
     import matplotlib.pyplot as plt 
     import seaborn as sns 
     
 def main():
-    if args.mode == "Segmentation" :
-        transform = transforms.Compose([
-            transforms.Resize((224, 224)), 
-            transforms.ToTensor()
-        ])
-        trainset = torchvision.datasets.VOCSegmentation("./seg_da/", year='2010', image_set='train', 
-                                                download=False, transform=transform, target_transform=transform)
-        testset = torchvision.datasets.VOCSegmentation("./seg_da/", year='2010', image_set='val', 
-                                               download=False, transform=transform, target_transform=transform)
+    if args.mode == "segmentation" :
+        label_path = "seg_da/VOCdevkit/VOC2010/SegmentationClass/"
+        image_path = "seg_da/VOCdevkit/VOC2010/JPEGImages"
+        trainset = dataset.voc_seg(label_path, image_path)
+        total_idx = list(range(len(trainset)))
+        split_idx = int(len(trainset) * 0.7)
+        trn_idx = total_idx[:split_idx]
+        val_idx = total_idx[split_idx:]
+
     elif args.mode == "Classification" :
         info_path = "./VOCdevkit/VOC2010/ImageSets/Main"
         image_path = "./VOCdevkit/VOC2010/JPEGImages"
@@ -129,11 +144,11 @@ def main():
     else : 
         raise NotImplementedError
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=False)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
+    testloader = torch.utils.data.DataLoader(trainset, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(val_idx))
 
-    if args.mode == "Segmentation" :
-        net = Unet2D((3, 224, 224), 1, 0.1)
+    if args.mode == "segmentation" :
+        net = Unet2D((3, 256, 256), 1, 0.1, num_classes=21)
     elif args.mode == "Classification" :
         net = torchvision.models.resnet50(pretrained=False, num_classes=20)
     else : 
@@ -142,7 +157,7 @@ def main():
     if args.optim == 'sgd' :
         optimizer = torch.optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
     elif args.optim == 'adam' :
-        optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
+        optimizer = torch.optim.Adam(net.parameters(), lr=0.0001)
     elif args.optim == 'radam' :
         optimizer = RAdam(net.parameters(), lr = 0.0001)
 
@@ -153,7 +168,7 @@ def main():
         criterion = nn.BCEWithLogitsLoss().cuda()
     elif args.loss_function == "dice" :
         criterion = DiceLoss().cuda()
-    elif args.loss_function == "cross_entorpy" :
+    elif args.loss_function == "cross_entropy" :
         criterion = nn.CrossEntropyLoss().cuda()
     else :
         raise NotImplementedError

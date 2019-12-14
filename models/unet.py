@@ -21,7 +21,7 @@ class ConvBnRelu(nn.Module):
         return x
 
 class StackEncoder(nn.Module):
-    def __init__(self, in_channels, out_channels, padding, momentum=0.1, radius=False):
+    def __init__(self, in_channels, out_channels, padding, momentum=0.5, radius=False):
         super(StackEncoder, self).__init__()
         self.convr1 = ConvBnRelu(in_channels, out_channels, kernel_size=(3, 3),
                                  stride=1, padding=padding, momentum=momentum, radius=radius)
@@ -37,7 +37,7 @@ class StackEncoder(nn.Module):
         return x, x_trace
 
 class StackDecoder(nn.Module):
-    def __init__(self, in_channels, out_channels, padding, momentum=0.1, radius=False):
+    def __init__(self, in_channels, out_channels, padding, momentum=0.5, radius=False):
         super(StackDecoder, self).__init__()
 
         # self.upSample = nn.Upsample(size=upsample_size, scale_factor=(2,2), mode='bilinear')
@@ -69,7 +69,7 @@ class StackDecoder(nn.Module):
 
 class Unet2D(nn.Module):
     
-    def __init__(self, in_shape, padding, momentum):
+    def __init__(self, in_shape, padding, momentum, num_classes):
         super(Unet2D, self).__init__()
         channels, heights, width = in_shape
         self.padding = padding
@@ -87,7 +87,7 @@ class Unet2D(nn.Module):
         self.up3 = StackDecoder(in_channels=256, out_channels=128, padding=padding, momentum=momentum)
         self.up4 = StackDecoder(in_channels=128, out_channels=64, padding=padding, momentum=momentum)
 
-        self.output_seg_map = nn.Conv2d(64, 1, kernel_size=(1, 1), padding=0, stride=1)
+        self.output_seg_map = nn.Conv2d(64, num_classes, kernel_size=(1, 1), padding=0, stride=1)
         self.output_up_seg_map = nn.Upsample(size=(heights, width), mode='nearest')
 
     def forward(self, x):
