@@ -102,7 +102,7 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
         if args.method == 'adv':
             # calculate gradients of the inputs
             ## make copies of the inputs, the model, the loss function to prevent unexpected effect to the model
-            x_clone = Variable(x.clone().detach(), requries_grad=True).cuda()
+            x_clone = Variable(x.clone().detach(), requires_grad=True).cuda()
             model_fn = copy.deepcopy(model)
             loss_fn = criterion_fn(model_fn(x_clone), y.long())
 
@@ -114,7 +114,7 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
             # calculate perturbations of the inputs
             scaled_perturbation = optimize_linear(grads, eps=0.25, norm=np.inf)
             # make adversarial samples
-            adv_x = Variable(x_clone+scaled_perturbation, requries_grad=True).cuda()
+            adv_x = Variable(x_clone+scaled_perturbation, requires_grad=True).cuda()
             
             # put acv_x into the model
             adv_y_pred = model_fn(adv_x)
