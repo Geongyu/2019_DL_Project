@@ -23,7 +23,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--mode", default="segmentation", type=str, help="Task Type, For example Segmentation or Classification")
+parser.add_argument("--mode", default="segmentation", type=str, help="Task Type, For example segmentation or classification")
 parser.add_argument("--optim", default="adam", type=str, help="Optimizers")
 parser.add_argument("--loss-function", default="smoothing", type=str)
 parser.add_argument("--epochs", default=100, type=int)
@@ -186,7 +186,7 @@ def main():
 
     if args.mode == "segmentation" :
         net = Unet2D((3, 256, 256), 1, 0.1, num_classes=21)
-    elif args.mode == "Classification" :
+    elif args.mode == "classification" :
         net = torchvision.models.resnet50(pretrained=False, num_classes=20)
     else : 
         raise NotImplementedError
