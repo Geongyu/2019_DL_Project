@@ -3,8 +3,7 @@ from tqdm import tqdm
 import torch 
 import copy
 import time
-import string
-from torch import nn
+from torch import nn 
 from torch.autograd import Variable
 from torch.utils import data as da 
 from torch.utils.data.sampler import SubsetRandomSampler
@@ -26,7 +25,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--mode", default="segmentation", type=str, help="Task Type, For example Segmentation or Classification")
 parser.add_argument("--optim", default="adam", type=str, help="Optimizers")
 parser.add_argument("--loss-function", default="cross_entropy", type=str)
-parser.add_argument("--epochs", default=50, type=int)
+parser.add_argument("--epochs", default=100, type=int)
 parser.add_argument('--method', default="adv", type=str)
 args = parser.parse_args()
 
@@ -46,7 +45,7 @@ def train(model, trn_loader, criterion, criterion_fn, optimizer, epoch, mode="se
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        
+
         if args.method == 'adv':
             # calculate gradients of the inputs
             ## make copies of the inputs, the model, the loss function to prevent unexpected effect to the model
@@ -68,26 +67,20 @@ def train(model, trn_loader, criterion, criterion_fn, optimizer, epoch, mode="se
             # x = adv_x
         
         if mode == "segmentation" : 
-            #iou = binary.jc(target.cpu().numpy(), y_pred.detach().cpu().numpy())
-            #sum_iou += iou 
-            #measure = iou 
-            if epoch == 30 :
-                from PIL import Image 
-                palette = torch.tensor([2 ** 25 - 1, 2 ** 15 - 1, 2 ** 21 - 1])
-                colors = torch.as_tensor([i for i in range(21)])[:, None] * palette
-                colors = (colors % 255).numpy().astype("uint8")
-                #import ipdb; ipdb.set_trace()
-                r = Image.fromarray(y_pred[0].byte().cpu().numpy().astype("uint8").reshape(224, 224))
-                r.putpalette(colors)
-                r.save("test3.png") 
-                import ipdb; ipdb.set_trace()
-            #import ipdb; ipdb.set_trace()
+            #from PIL import Image 
+            #palette = torch.tensor([2 ** 25 - 1, 2 ** 15 - 1, 2 ** 21 - 1])
+            #colors = torch.as_tensor([i for i in range(21)])[:, None] * palette
+            #colors = (colors % 255).numpy().astype("uint8")
+            #r = Image.fromarray(y_pred[0].byte().cpu().numpy().astype("uint8").reshape(256, 256))
+            #r.putpalette(colors)
+            #r.save("test3.png") 
+            pass
 
         elif mode == "classification" :
             acc = accuracy_score(target.detach().cpu().numpy(), y_pred.detach().cpu().numpy())
             sum_acc += acc 
             measure = acc
-
+        
         trn_loss += (loss)
         end_time = time.time()
         print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{4:.3f}]".format(epoch, i, len(trn_loader), loss.item(), end_time-start_time))
@@ -103,7 +96,7 @@ def train(model, trn_loader, criterion, criterion_fn, optimizer, epoch, mode="se
         total_measure = total_acc
 
     # 모델 저장기준 수정해야함 (14 이건규)
-    if epoch == 50 : 
+    if epoch == 25 or epoch == 50 or epoch == 75 or epoch == 99 : 
         torch.save(model.state_dict(), '{0}{1}_{2}.pth'.format("./", 'model', epoch))
 
     return trn_loss#, total_measure
@@ -120,7 +113,7 @@ def validate(model, val_loader, criterion, epoch, mode="segmentation"):
             y = target.cuda()
 
             y_pred = model(x)
-            loss = criterion(y_pred, y)
+            loss = criterion(y_pred, y.long())
             val_loss += (loss)
             if mode == "segmentation" : 
                 #iou = binary.jc(target.cpu().numpy(), y_pred.detach().cpu().numpy())
@@ -204,7 +197,7 @@ def main():
     losses = []
     val_losses = []
     for epoch in range(args.epochs) : 
-        train(net, trainloader, criterion, optimizer, epoch)
+        train(net, trainloader, criterion, criterion_fn, optimizer, epoch)
         validate(net, testloader, criterion, epoch)
 
     return losses, val_losses
