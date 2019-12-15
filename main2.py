@@ -91,7 +91,7 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
     start_time = time.time()
     #with torch.no_grad() :
     for i, (data, target) in enumerate(val_loader) :
-        model.train()
+        model.eval()
         x = data.cuda()
         y = target.cuda()
 
@@ -102,8 +102,9 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
         if args.method == 'adv':
             # calculate gradients of the inputs
             ## make copies of the inputs, the model, the loss function to prevent unexpected effect to the model
-            x_clone = Variable(x.clone().detach(), requires_grad=True).cuda()
-            model_fn = copy.deepcopy(model)
+            x_clone = Variable(x.detach(), requires_grad=True).cuda()
+            import ipdb; ipdb.set_trace()
+            model_fn = model
             loss_fn = criterion_fn(model_fn(x_clone), y.long())
 
             optimizer.zero_grad()
@@ -118,7 +119,7 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
             
             # put acv_x into the model
             adv_y_pred = model_fn(adv_x)
-            adv_loss = criterion_fn(adv_y_pred, y.long().clone().detach())
+            adv_loss = criterion_fn(adv_y_pred, y.long().detach())
             adv_losses += adv_loss.item()
             
             optimizer.zero_grad()
