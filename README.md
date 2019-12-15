@@ -14,6 +14,16 @@ Semester: Fall
 
 
 ## Data Sets Statistics 
+| Classes | Images |
+| -------- | :------: |
+| Aeroplane | 579 |
+| Bicycle | 471 |
+| Bird | 666 |
+| Boat | 432 |
+
+
+
+
 Classification/Detection Tasks
                   train	           val	         trainval <br>
               Images	Objects	Images	Objects	Images	Objects <br>
