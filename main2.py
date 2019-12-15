@@ -17,7 +17,7 @@ import torchvision
 import torch.backends.cudnn as cudnn
 from unet import Unet2D
 from utils import optimize_linear
-from losses import DiceLoss
+from losses import DiceLoss, SmoothCrossEntropyLoss
 from medpy.metric import binary
 import numpy as np
 from sklearn.metrics import accuracy_score
@@ -25,12 +25,12 @@ from sklearn.metrics import accuracy_score
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", default="segmentation", type=str, help="Task Type, For example Segmentation or Classification")
 parser.add_argument("--optim", default="adam", type=str, help="Optimizers")
-parser.add_argument("--loss-function", default="cross_entropy", type=str)
+parser.add_argument("--loss-function", default="smoothing", type=str)
 parser.add_argument("--epochs", default=100, type=int)
 parser.add_argument('--method', default="adv", type=str)
 args = parser.parse_args()
 
-def train(model, trn_loader, criterion, optimizer, epoch, mode="segmentation"):
+def train(model, trn_loader, criterion, optimizer, epoch, mode="classification", tricks="none"):
     trn_loss = 0
     start_time = time.time()
     sum_iou = 0 
@@ -39,9 +39,13 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="segmentation"):
         model.train()
         x = image.cuda()
         y = target.cuda()
-        
         y_pred = model(x)
-        loss = criterion(y_pred, y.long())
+        yy = torch.max(y_pred, 1)[1]
+        
+        if tricks ==  "Smoothing" :
+            loss = criterion(y_pred, y.long())
+        else :
+            loss = criterion(y_pred, y)
         
         optimizer.zero_grad()
         loss.backward()
@@ -58,9 +62,10 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="segmentation"):
             pass
 
         elif mode == "classification" :
-            acc = accuracy_score(target.detach().cpu().numpy(), y_pred.detach().cpu().numpy())
-            sum_acc += acc 
-            measure = acc
+            #acc = accuracy_score(target.detach().cpu().numpy(), y_pred.detach().cpu().numpy())
+            #sum_acc += acc 
+            #measure = acc
+            pass
         
         trn_loss += (loss)
         end_time = time.time()
@@ -69,42 +74,34 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="segmentation"):
 
     trn_loss = trn_loss/len(trn_loader)
     if mode == "segmentation" : 
-        #total_iou = sum_iou / len(trn_loader)
-        #total_measure = total_iou
         pass
     elif mode == "classification" :
         total_acc = sum_acc / len(trn_loader)
         total_measure = total_acc
 
     # 모델 저장기준 수정해야함 (14 이건규)
-    if epoch == 25 or epoch == 50 or epoch == 75 or epoch == 99 : 
+    if epoch == 24 or epoch == 49 or epoch == 74 or epoch == 99 : 
         torch.save(model.state_dict(), '{0}{1}_{2}.pth'.format("./", 'model', epoch))
 
     return trn_loss#, total_measure
 
 def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode="segmentation"):
-    model.eval()
     val_loss = 0 
+    model.eval()
     adv_losses = 0
     sum_iou = 0 
     adv_sum_iou = 0
     start_time = time.time()
-    #with torch.no_grad() :
-    for i, (data, target) in enumerate(val_loader) :
-        model.eval()
-        x = data.cuda()
-        y = target.cuda()
-
-        y_pred = model(x)
-        loss = criterion(y_pred, y.long())
-        val_loss += (loss)
-        
-        if args.method == 'adv':
+    
+    if args.method == 'adv' :
+        for i, (data, target) in enumerate(val_loader) :
+            x = data.cuda()
+            y = target.cuda()
+            print("This places not!")
             # calculate gradients of the inputs
             ## make copies of the inputs, the model, the loss function to prevent unexpected effect to the model
-            x_clone = Variable(x.detach(), requires_grad=True).cuda()
-            import ipdb; ipdb.set_trace()
-            model_fn = model
+            x_clone = Variable(x.clone().detach(), requires_grad=True).cuda()
+            model_fn = copy.deepcopy(model)
             loss_fn = criterion_fn(model_fn(x_clone), y.long())
 
             optimizer.zero_grad()
@@ -123,37 +120,41 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
             adv_losses += adv_loss.item()
             
             optimizer.zero_grad()
-        
-        if mode == "segmentation" : 
-            #iou = binary.jc(target.cpu().numpy(), y_pred.detach().cpu().numpy())
-            #sum_iou += iou 
-            #measure = iou 
-            pass
-        elif mode == "classification" :
-            acc = accuracy_score(target.cpu().numpy(), y_pred.detach().cpu().numpy())
-            sum_acc += acc 
-            measure = acc
+
+            end_time = time.time()
+            print(" [Validation] [{0}] [{1}/{2}] Adv. Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{4:.3f}]".format(epoch, i, len(val_loader), adv_loss.item(), end_time-start_time))
+            start_time = time.time()
             
-            adv_acc = accuracy_score(target.cpu().numpy(), adv_y_pred.detach().cpu().numpy())
-            adv_sum_acc += adv_acc
-            
-        end_time = time.time()
-        print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Adv. Losses = [{4:.4f}] Time(Seconds) = [{5:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), loss.item(), adv_loss.item(), end_time-start_time))
-        start_time = time.time()
+
+    if args.mode != "adv" :
+        with torch.no_grad() :
+            for i, (data, target) in enumerate(val_loader) :
+                x = data.cuda()
+                y = target.cuda()
+
+                y_pred = model(x)
+                loss = criterion(y_pred, y)
+                val_loss += (loss)
+
+                end_time = time.time()
+                print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{4:.3f}]".format(epoch, i, len(val_loader), loss.item(), end_time-start_time))
+                start_time = time.time()
+
     
     if mode == "segmentation" : 
-        #total_iou = sum_iou / len(val_loader)
-        #total_measure = total_iou
         pass
     elif mode == "classification" :
-        total_acc = sum_acc / len(val_loader)
-        total_measure = total_acc
+        #total_acc = sum_acc / len(val_loader)
+        #total_measure = total_acc
+        pass
 
-    # write your codes here
-    val_loss = val_loss / len(val_loader)
-    adv_losses /= len(val_loader)
+    if args.method != 'adv' :
+        val_loss = val_loss / len(val_loader)
+        return val_loss
+    else : 
+        adv_losses /= len(val_loader)
+        return adv_losses
 
-    return val_loss, adv_losses #, total_measure
 
 def draw_plot(real_photo, segmentationmap, predict_map) :
     import matplotlib.pyplot as plt 
@@ -170,14 +171,18 @@ def main():
         val_idx = total_idx[split_idx:]
 
     elif args.mode == "Classification" :
-        info_path = "./VOCdevkit/VOC2010/ImageSets/Main"
-        image_path = "./VOCdevkit/VOC2010/JPEGImages"
+        info_path = "seg_da/VOCdevkit/VOC2010/SegmentationClass/"
+        image_path = "seg_da/VOCdevkit/VOC2010/JPEGImages"
         trainset = dataset.voc_cls(info_path, image_path)
+        total_idx = list(range(len(trainset)))
+        split_idx = int(len(trainset) * 0.7)
+        trn_idx = total_idx[:split_idx]
+        val_idx = total_idx[split_idx:]
     else : 
         raise NotImplementedError
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
-    testloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=False, sampler=SubsetRandomSampler(val_idx))
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=32, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
+    testloader = torch.utils.data.DataLoader(trainset, batch_size=32, shuffle=False, sampler=SubsetRandomSampler(val_idx))
 
     if args.mode == "segmentation" :
         net = Unet2D((3, 256, 256), 1, 0.1, num_classes=21)
@@ -205,6 +210,8 @@ def main():
     elif args.loss_function == "cross_entropy" :
         criterion = nn.CrossEntropyLoss().cuda()
         criterion_fn = nn.CrossEntropyLoss().cuda()
+    elif args.loss_function == "smoothing" :
+        criterion = SmoothCrossEntropyLoss(smoothing=0.2).cuda()
     else :
         raise NotImplementedError
     
