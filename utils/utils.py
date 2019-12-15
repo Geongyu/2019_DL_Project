@@ -1,4 +1,5 @@
 import torch
+import numpy as np 
 
 def optimize_linear(grad, eps, norm=np.inf):
 
