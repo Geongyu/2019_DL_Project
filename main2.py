@@ -89,56 +89,56 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
     sum_iou = 0 
     adv_sum_iou = 0
     start_time = time.time()
-    with torch.no_grad() :
-        for i, (data, target) in enumerate(val_loader) :
-            model.train()
-            x = data.cuda()
-            y = target.cuda()
+    #with torch.no_grad() :
+    for i, (data, target) in enumerate(val_loader) :
+        model.train()
+        x = data.cuda()
+        y = target.cuda()
 
-            y_pred = model(x)
-            loss = criterion(y_pred, y.long())
-            val_loss += (loss)
+        y_pred = model(x)
+        loss = criterion(y_pred, y.long())
+        val_loss += (loss)
+        
+        if args.method == 'adv':
+            # calculate gradients of the inputs
+            ## make copies of the inputs, the model, the loss function to prevent unexpected effect to the model
+            x_clone = Variable(x.clone().detach(), requries_grad=True).cuda()
+            model_fn = copy.deepcopy(model)
+            loss_fn = criterion_fn(model_fn(x_clone), y.long())
+
+            optimizer.zero_grad()
+            loss_fn.backward()
+
+            grads = x_clone.grad
+
+            # calculate perturbations of the inputs
+            scaled_perturbation = optimize_linear(grads, eps=0.25, norm=np.inf)
+            # make adversarial samples
+            adv_x = Variable(x_clone+scaled_perturbation, requries_grad=True).cuda()
             
-            if args.method == 'adv':
-                # calculate gradients of the inputs
-                ## make copies of the inputs, the model, the loss function to prevent unexpected effect to the model
-                x_clone = Variable(x.clone().detach(), requires_grad=True).cuda()
-                model_fn = copy.deepcopy(model)
-                loss_fn = criterion_fn(model_fn(x_clone), y.long())
-
-                optimizer.zero_grad()
-                loss_fn.backward()
-
-                grads = x_clone.grad
-
-                # calculate perturbations of the inputs
-                scaled_perturbation = optimize_linear(grads, eps=0.25, norm=np.inf)
-                # make adversarial samples
-                adv_x = Variable(x_clone+scaled_perturbation, requries_grad=True).cuda()
-                
-                # put acv_x into the model
-                adv_y_pred = model_fn(adv_x)
-                adv_loss = criterion_fn(adv_y_pred, y.long().clone().detach())
-                adv_losses += adv_loss.item()
-                
-                optimizer.zero_grad()
+            # put acv_x into the model
+            adv_y_pred = model_fn(adv_x)
+            adv_loss = criterion_fn(adv_y_pred, y.long().clone().detach())
+            adv_losses += adv_loss.item()
             
-            if mode == "segmentation" : 
-                #iou = binary.jc(target.cpu().numpy(), y_pred.detach().cpu().numpy())
-                #sum_iou += iou 
-                #measure = iou 
-                pass
-            elif mode == "classification" :
-                acc = accuracy_score(target.cpu().numpy(), y_pred.detach().cpu().numpy())
-                sum_acc += acc 
-                measure = acc
-                
-                adv_acc = accuracy_score(target.cpu().numpy(), adv_y_pred.detach().cpu().numpy())
-                adv_sum_acc += adv_acc
-                
-            end_time = time.time()
-            print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Adv. Losses = [{4:.4f}] Time(Seconds) = [{5:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), loss.item(), adv_loss.item(), end_time-start_time))
-            start_time = time.time()
+            optimizer.zero_grad()
+        
+        if mode == "segmentation" : 
+            #iou = binary.jc(target.cpu().numpy(), y_pred.detach().cpu().numpy())
+            #sum_iou += iou 
+            #measure = iou 
+            pass
+        elif mode == "classification" :
+            acc = accuracy_score(target.cpu().numpy(), y_pred.detach().cpu().numpy())
+            sum_acc += acc 
+            measure = acc
+            
+            adv_acc = accuracy_score(target.cpu().numpy(), adv_y_pred.detach().cpu().numpy())
+            adv_sum_acc += adv_acc
+            
+        end_time = time.time()
+        print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Adv. Losses = [{4:.4f}] Time(Seconds) = [{5:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), loss.item(), adv_loss.item(), end_time-start_time))
+        start_time = time.time()
     
     if mode == "segmentation" : 
         #total_iou = sum_iou / len(val_loader)
@@ -176,7 +176,7 @@ def main():
         raise NotImplementedError
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
-    testloader = torch.utils.data.DataLoader(trainset, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(val_idx))
+    testloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=False, sampler=SubsetRandomSampler(val_idx))
 
     if args.mode == "segmentation" :
         net = Unet2D((3, 256, 256), 1, 0.1, num_classes=21)
