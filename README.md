@@ -5,6 +5,14 @@ Professor: Sangheum Hwang \
 Semester: Fall 
 
 
+## Dependency 
+- torch 
+- argparse
+- torchvision
+- medpy
+- sklearn
+
+
 ## Data Sets Statistics 
 Classification/Detection Tasks
                   train	           val	         trainval <br>
