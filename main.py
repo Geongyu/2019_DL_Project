@@ -22,7 +22,7 @@ from medpy.metric import binary
 from sklearn.metrics import accuracy_score
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--mode", default="segmentation", type=str, help="Task Type, For example Segmentation or Classification")
+parser.add_argument("--mode", default="segmentation", type=str, help="Task Type, For example segmentation or classification")
 parser.add_argument("--optim", default="adam", type=str, help="Optimizers")
 parser.add_argument("--loss-function", default="cross_entropy", type=str)
 parser.add_argument("--epochs", default=100, type=int)
@@ -85,7 +85,7 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
     model.eval()
     val_loss = 0 
     adv_losses = 0
-    sum_iou = 0 ]
+    sum_iou = 0
     adv_sum_iou = 0
     start_time = time.time()
     with torch.no_grad() :
@@ -167,7 +167,7 @@ def main():
         trn_idx = total_idx[:split_idx]
         val_idx = total_idx[split_idx:]
 
-    elif args.mode == "Classification" :
+    elif args.mode == "classification" :
         info_path = "./VOCdevkit/VOC2010/ImageSets/Main"
         image_path = "./VOCdevkit/VOC2010/JPEGImages"
         trainset = dataset.voc_cls(info_path, image_path)
