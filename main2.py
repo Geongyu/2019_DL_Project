@@ -1,5 +1,4 @@
 import dataset
-from tqdm import tqdm 
 import torch 
 import copy
 import time
@@ -18,9 +17,8 @@ import torch.backends.cudnn as cudnn
 from unet import Unet2D
 from utils import optimize_linear
 from losses import DiceLoss, SmoothCrossEntropyLoss
-from medpy.metric import binary
 import numpy as np
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, average_precision_score
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", default="segmentation", type=str, help="Task Type, For example segmentation or classification")
@@ -30,15 +28,14 @@ parser.add_argument("--epochs", default=50, type=int)
 parser.add_argument('--method', default="adv", type=str)
 parser.add_argument("--exp", default="Test", type=str)
 parser.add_argument("--tricks", default="None", type=str)
-parser.add_argument("--batch-train", default=32, type=int)
-parser.add_argument("--batch-val", default=16, type=int)
+parser.add_argument("--batch-train", default=4, type=int)
+parser.add_argument("--batch-val", default=1, type=int)
 args = parser.parse_args()
 
 def train(model, trn_loader, criterion, optimizer, epoch, mode="classification"):
     trn_loss = 0
     start_time = time.time()
-    sum_iou = 0 
-    sum_acc = 0 
+    sum_total = 0 
 
     for i, (image, target) in enumerate(trn_loader) :
         model.train()
@@ -48,30 +45,39 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="classification")
 
         if mode == "segmentation" : 
             loss = criterion(y_pred, y.long())
+            measure = 0
 
         elif mode == "classification" :
             loss = criterion(y_pred, y)
+
+            pos_probs = torch.sigmoid(y_pred)
+            pos_preds = (pos_probs > 0.5).float()
+            
+            tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
+            tm1 = len(target) * 20
+            acc = tmp/tm1
+            sum_total += acc  
+            measure = acc
+
+            #precision_score(pos_preds.cpu(), target.cpu(), average="macro") 
                 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
                        
         trn_loss += (loss)
+
         end_time = time.time()
-        print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{4:.3f}]".format(epoch, i, len(trn_loader), loss.item(), end_time-start_time))
+        print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{5:.3f}]".format(epoch, i, len(trn_loader), loss.item(), end_time-start_time, measure))
         start_time = time.time()
 
     trn_loss = trn_loss/len(trn_loader)
-
-    if mode == "segmentation" : 
-        pass
-    elif mode == "classification" :
-        pass
+    total_measure = sum_total / len(trn_loader)
 
     if epoch == 24 or epoch == 49 or epoch == 74 or epoch == 99  or epoch == 124 or epoch == 149 or epoch == 174 or epoch == 199: 
         torch.save(model.state_dict(), '{0}{1}_{2}_{3}.pth'.format("./", 'model', epoch, args.exp))
 
-    return trn_loss#, total_measure
+    return trn_loss, total_measure
 
 def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode="segmentation"):
     val_loss = 0 
@@ -80,6 +86,7 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
     sum_iou = 0 
     adv_sum_iou = 0
     start_time = time.time()
+    sum_total = 0 
 
     if args.method == 'adv' :
         for i, (data, target) in enumerate(val_loader) :
@@ -87,7 +94,12 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
             y = target.cuda()
             x_clone = Variable(x.clone().detach(), requires_grad=True).cuda()
             model_fn = copy.deepcopy(model)
-            loss_fn = criterion_fn(model_fn(x_clone), y.long())
+
+            if mode == "segmentation" : 
+                loss_fn = criterion_fn(model_fn(x_clone), y.long())
+
+            elif mode == "classification" :
+                loss_fn = criterion_fn(model_fn(x_clone), y)
 
             optimizer.zero_grad()
             loss_fn.backward()
@@ -104,16 +116,26 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
 
             if mode == "segmentation" : 
                 adv_loss = criterion_fn(adv_y_pred, y.detach().long())
+                measure = 0 
 
             elif mode == "classification" :
-                adv_loss = criterion_fn(adv_y_pred, y)
+                
+                pos_probs = torch.sigmoid(adv_y_pred)
+                pos_preds = (pos_probs > 0.5).float()
+                adv_loss = criterion_fn(adv_y_pred, y.detach())
+                
+                tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
+                tm1 = len(target) * 20
+                acc = tmp/tm1
+                sum_total += acc  
+                measure = acc
 
             adv_losses += adv_loss.item()
             
             optimizer.zero_grad()
 
             end_time = time.time()
-            print(" [Validation] [{0}] [{1}/{2}] Adv. Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{4:.3f}]".format(epoch, i, len(val_loader), adv_loss.item(), end_time-start_time))
+            print(" [Validation] [{0}] [{1}/{2}] Adv. Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), adv_loss.item(), end_time-start_time, measure))
             start_time = time.time()
     else  :
         with torch.no_grad() :
@@ -125,13 +147,23 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
 
                 if mode == "segmentation" : 
                     loss = criterion(y_pred, y.long())
+                    measure = 0 
 
                 elif mode == "classification" :
                     loss = criterion(y_pred, y)
+                    pos_probs = torch.sigmoid(y_pred)
+                    pos_preds = (pos_probs > 0.5).float()
+                    
+                    tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
+                    tm1 = len(target) * 20
+                    acc = tmp/tm1
+                    sum_total += acc  
+                    measure = acc
+
                 val_loss += (loss)
 
                 end_time = time.time()
-                print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{4:.3f}]".format(epoch, i, len(val_loader), loss.item(), end_time-start_time))
+                print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), loss.item(), end_time-start_time, measure))
                 start_time = time.time()
 
     
@@ -142,10 +174,13 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
 
     if args.method != 'adv' :
         val_loss = val_loss / len(val_loader)
-        return val_loss
+        mean_total = sum_total / len(val_loader)
+        return val_loss, mean_total
+
     else : 
         adv_losses /= len(val_loader)
-        return adv_losses
+        mean_total = sum_total / len(val_loader)
+        return adv_losses, mean_total
 
 
 def draw_plot(real_photo, segmentationmap, predict_map) :
@@ -164,7 +199,7 @@ def main():
         label_path = "seg_da/VOCdevkit/VOC2010/SegmentationClass/"
         image_path = "seg_da/VOCdevkit/VOC2010/JPEGImages"
 
-        if args.tricks == "cut-off" :
+        if args.tricks == "cut-out" :
             trainset = dataset.voc_seg(label_path, image_path, cut_out=True)
             valset = dataset.voc_seg(label_path, image_path, cut_out=False)
             total_idx = list(range(len(trainset)))
@@ -203,7 +238,7 @@ def main():
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
-        elif args.tricks == "cut-off" :
+        elif args.tricks == "cut-out" :
             trainset = dataset.voc_cls(info_path, image_path, cut_out=True)
             valset = dataset.voc_cls(info_path, image_path, cut_out=False)
             total_idx = list(range(len(trainset)))
@@ -266,21 +301,27 @@ def main():
         raise NotImplementedError
     
     losses = []
+    tr_acc = [] 
     val_losses = []
+    val_acc = []
     for epoch in range(args.epochs) : 
-        tr = train(net, trainloader, criterion, optimizer, epoch, mode=args.mode)
-        va = validate(net, testloader, criterion, criterion_fn, optimizer, epoch, mode=args.mode)
+        tr, tac = train(net, trainloader, criterion, optimizer, epoch, mode=args.mode)
+        va, vac = validate(net, testloader, criterion, criterion_fn, optimizer, epoch, mode=args.mode)
         losses.append(tr)
+        tr_acc.append(tac)
         val_losses.append(va)
+        val_acc.append(vac)
 
-    return losses, val_losses
+    return losses, tr_acc, val_losses, val_acc
 
 
 if __name__ == '__main__':
-    tr_loss, val_loss = main()
+    tr_loss, tr_acc, val_loss, val_acc = main()
     try :
         torch.save(tr_loss, args.mode + args.method + str(args.epochs) + "Trainloss.pkl")
+        torch.save(tr_acc, args.mode + args.method + str(args.epochs) + "Trainacc.pkl")
         torch.save(val_loss, args.mode + args.method + str(args.epochs) + "Validation.pkl")
+        torch.save(val_acc, args.mode + args.method + str(args.epochs) + "Validation_acc.pkl")
     except : 
         import ipdb; ipdb.set_trace()
     
