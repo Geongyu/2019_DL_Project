@@ -25,13 +25,14 @@ from sklearn.metrics import accuracy_score
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", default="segmentation", type=str, help="Task Type, For example segmentation or classification")
 parser.add_argument("--optim", default="radam", type=str, help="Optimizers")
-parser.add_argument("--loss-function", default="smoothing", type=str)
+parser.add_argument("--loss-function", default="bce", type=str)
 parser.add_argument("--epochs", default=50, type=int)
 parser.add_argument('--method', default="adv", type=str)
 parser.add_argument("--exp", default="Test", type=str)
+parser.add_argument("--tricks", default="None", type=str)
 args = parser.parse_args()
 
-def train(model, trn_loader, criterion, optimizer, epoch, mode="classification", tricks="Smoothing"):
+def train(model, trn_loader, criterion, optimizer, epoch, mode="classification"):
     trn_loss = 0
     start_time = time.time()
     sum_iou = 0 
@@ -41,37 +42,32 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="classification",
         x = image.cuda()
         y = target.cuda()
         y_pred = model(x)
+        import ipdb; ipdb.set_trace()
         
-        if tricks ==  "Smoothing" :
+        if mode == "segmentation" : 
             loss = criterion(y_pred, y.long())
-        else :
-            loss = criterion(y_pred, y.long())
-        
+
+        elif mode == "classification" :
+            loss = criterion(y_pred, y)
+                
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        
-        if mode == "segmentation" : 
-            pass
-
-        elif mode == "classification" :
-            pass
-        
+                       
         trn_loss += (loss)
         end_time = time.time()
         print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{4:.3f}]".format(epoch, i, len(trn_loader), loss.item(), end_time-start_time))
         start_time = time.time()
 
     trn_loss = trn_loss/len(trn_loader)
+
     if mode == "segmentation" : 
         pass
     elif mode == "classification" :
-        total_acc = sum_acc / len(trn_loader)
-        total_measure = total_acc
+        pass
 
-    # 모델 저장기준 수정해야함 (14 이건규)
     if epoch == 24 or epoch == 49 or epoch == 74 or epoch == 99  or epoch == 124 or epoch == 149 or epoch == 174 or epoch == 199: 
-        torch.save(model.state_dict(), '{0}{1}_{2}_{4}.pth'.format("./", 'model', epoch, args.exp))
+        torch.save(model.state_dict(), '{0}{1}_{2}_{3}.pth'.format("./", 'model', epoch, args.exp))
 
     return trn_loss#, total_measure
 
@@ -103,7 +99,13 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
             
             # put acv_x into the model
             adv_y_pred = model_fn(adv_x)
-            adv_loss = criterion_fn(adv_y_pred, y.detach().long())
+
+            if mode == "segmentation" : 
+                adv_loss = criterion_fn(adv_y_pred, y.detach().long())
+
+            elif mode == "classification" :
+                adv_loss = criterion_fn(adv_y_pred, y)
+
             adv_losses += adv_loss.item()
             
             optimizer.zero_grad()
@@ -118,7 +120,12 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
                 y = target.cuda()
 
                 y_pred = model(x)
-                loss = criterion(y_pred, y.long())
+
+                if mode == "segmentation" : 
+                    loss = criterion(y_pred, y.long())
+
+                elif mode == "classification" :
+                    loss = criterion(y_pred, y)
                 val_loss += (loss)
 
                 end_time = time.time()
@@ -154,21 +161,55 @@ def main():
     if args.mode == "segmentation" :
         label_path = "seg_da/VOCdevkit/VOC2010/SegmentationClass/"
         image_path = "seg_da/VOCdevkit/VOC2010/JPEGImages"
-        trainset = dataset.voc_seg(label_path, image_path)
-        total_idx = list(range(len(trainset)))
-        split_idx = int(len(trainset) * 0.7)
-        trn_idx = total_idx[:split_idx]
-        val_idx = total_idx[split_idx:]
 
-    elif args.mode == "classification" :
-        info_path = "seg_da/VOCdevkit/VOC2010/SegmentationClass/"
-        image_path = "seg_da/VOCdevkit/VOC2010/JPEGImages"
-        if args.loss_function == "smoothing" :
-            trainset = dataset.voc_cls_smoothing(label_path, image_path)
+        if args.tricks == "cut-off" :
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=True)
+            valset = dataset.voc_seg(label_path, image_path, cut_out=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
+        elif args.tricks == "smoothing" :
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=False)
+            valset = dataset.voc_seg(label_path, image_path, cut_out=False)
+            total_idx = list(range(len(trainset)))
+            split_idx = int(len(trainset) * 0.7)
+            trn_idx = total_idx[:split_idx]
+            val_idx = total_idx[split_idx:]
+        elif args.tricks == "all" :
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=True)
+            valset = dataset.voc_seg(label_path, image_path, cut_out=False)
+            total_idx = list(range(len(trainset)))
+            split_idx = int(len(trainset) * 0.7)
+            trn_idx = total_idx[:split_idx]
+            val_idx = total_idx[split_idx:]
+        else :
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=False)
+            total_idx = list(range(len(trainset)))
+            split_idx = int(len(trainset) * 0.7)
+            trn_idx = total_idx[:split_idx]
+            val_idx = total_idx[split_idx:]
+
+    elif args.mode == "classification" :
+        info_path = "seg_da/VOCdevkit/VOC2010/SegmentationClass/"
+        image_path = "seg_da/VOCdevkit/VOC2010/JPEGImages"
+
+        if args.tricks == "smoothing" :
+            trainset = dataset.voc_cls_smoothing(label_path, image_path)
+            valset = dataset.voc_cls(label_path, image_path, cut_out=False)
+            total_idx = list(range(len(trainset)))
+            split_idx = int(len(trainset) * 0.7)
+            trn_idx = total_idx[:split_idx]
+            val_idx = total_idx[split_idx:]
+        
+        elif args.tricks == "cut-off" :
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=True)
+            valset = dataset.voc_seg(label_path, image_path, cut_out=False)
+            total_idx = list(range(len(trainset)))
+            split_idx = int(len(trainset) * 0.7)
+            trn_idx = total_idx[:split_idx]
+            val_idx = total_idx[split_idx:]
+
         else :
             trainset = dataset.voc_cls(info_path, image_path)
             total_idx = list(range(len(trainset)))
@@ -178,7 +219,7 @@ def main():
     else : 
         raise NotImplementedError
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=32, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
     testloader = torch.utils.data.DataLoader(trainset, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(val_idx))
 
     if args.mode == "segmentation" :
@@ -201,12 +242,15 @@ def main():
     if args.loss_function == "bce" :
         criterion = nn.BCEWithLogitsLoss().cuda()
         criterion_fn = nn.BCEWithLogitsLoss().cuda()
+
     elif args.loss_function == "dice" :
         criterion = DiceLoss().cuda()
         criterion_fn = DiceLoss().cuda()
+
     elif args.loss_function == "cross_entropy" :
         criterion = nn.CrossEntropyLoss().cuda()
         criterion_fn = nn.CrossEntropyLoss().cuda()
+
     elif args.loss_function == "smoothing" :
         criterion = nn.BCEWithLogitsLoss().cuda()
         criterion_fn = nn.BCEWithLogitsLoss().cuda()
@@ -216,8 +260,8 @@ def main():
     losses = []
     val_losses = []
     for epoch in range(args.epochs) : 
-        tr = train(net, trainloader, criterion, optimizer, epoch)
-        va = validate(net, testloader, criterion, criterion_fn, optimizer, epoch)
+        tr = train(net, trainloader, criterion, optimizer, epoch, mode=args.mode)
+        va = validate(net, testloader, criterion, criterion_fn, optimizer, epoch, mode=args.mode)
         losses.append(tr)
         val_losses.append(va)
 
@@ -227,8 +271,8 @@ def main():
 if __name__ == '__main__':
     tr_loss, val_loss = main()
     try :
-        torch.save(tr_loss, args.mode + args.method + args.epochs + "Trainloss.pkl")
-        torch.save(val_loss, args.mode + args.method + args.epochs + "Validation.pkl")
+        torch.save(tr_loss, args.mode + args.method + str(args.epochs) + "Trainloss.pkl")
+        torch.save(val_loss, args.mode + args.method + str(args.epochs) + "Validation.pkl")
     except : 
         import ipdb; ipdb.set_trace()
     

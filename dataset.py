@@ -36,7 +36,7 @@ def read_all(path):
     return dataest
 
 class voc_cls(Dataset):
-    def __init__(self, label_path, image_path) :
+    def __init__(self, label_path, image_path, cut_out=False) :
         self.label_path = label_path
         self.image_path = image_path
         self.classes = ["background", 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 
@@ -46,6 +46,7 @@ class voc_cls(Dataset):
         self.transform_1 = transforms.ToTensor()
         self.resize = transforms.Resize((256, 256))
         self.normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        self.cut_out = cut_out
     
     def __len__(self) :
         return len(self.data_list)
@@ -61,6 +62,9 @@ class voc_cls(Dataset):
         
         image = Image.open(image)
         image = self.resize(image)
+        if self.cut_out == True :
+            ct = cutout(mask_size = (32, 32, 1), p = 0.5, cutout_inside = True)
+            image = ct(image)
         image = self.transform_1(image)
         image = self.normalize(image)
 
@@ -85,13 +89,14 @@ class voc_cls(Dataset):
         return self.classes
 
 class voc_seg(Dataset):
-    def __init__(self, label_path, image_path) :
+    def __init__(self, label_path, image_path, cut_out=True) :
         self.label_path = label_path
         self.image_path = image_path
         self.classes = ["background", 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 
                         'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
 
         self.data_list = os.listdir(label_path)
+        self.cut_out = cut_out
         self.transform_1 = transforms.ToTensor()
         self.resize = transforms.Resize((256, 256))
         self.normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
@@ -105,11 +110,11 @@ class voc_seg(Dataset):
         label = os.path.join(self.label_path, base)
         image = os.path.join(self.image_path, base.replace(".png", ".jpg"))
 
-        #label = self.label_path + "/" +  base
-        #image = self.image_path + "/" +  base.replace("png", "jpg")
-        
         image = Image.open(image)
         image = self.resize(image)
+        if self.cut_out == True :
+            cut = cutout(mask_size = 32, p = 0.5, cutout_inside = True)
+            image = cut(image)
         image = self.transform_1(image)
         image = self.normalize(image)
 
@@ -124,16 +129,17 @@ class voc_seg(Dataset):
     def get_classes(self) :
         return self.classes
 
+
+
 def cutout(mask_size, p, cutout_inside, mask_color=(0, 0, 0)):
     mask_size_half = mask_size // 2
     offset = 1 if mask_size % 2 == 0 else 0
-
+    
     def _cutout(image):
         image = np.asarray(image).copy()
 
         if np.random.random() > p:
             return image
-
         h, w = image.shape[:2]
 
         if cutout_inside:
