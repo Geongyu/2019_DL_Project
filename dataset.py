@@ -33,11 +33,12 @@ class voc_cls(Dataset):
         base = self.data_list[idx]
         label = os.path.join(self.label_path, base)
         image = os.path.join(self.image_path, base.replace(".png", ".jpg"))
+        file_name = os.path.join(self.image_path, base.replace(".png", ".jpg"))
 
         image = Image.open(image)
         image = self.resize(image)
         if self.cut_out == True :
-            ct = cutout(mask_size = (32, 32, 1), p = 0.5, cutout_inside = True)
+            ct = cutout(mask_size = 32, p = 0.5, cutout_inside = True)
             image = ct(image)
         image = self.transform_1(image)
         image = self.normalize(image)
@@ -59,7 +60,7 @@ class voc_cls(Dataset):
             case = case - 0.01
             case = np.abs(case)
 
-        return image, case 
+        return image, case, file_name
     
     def get_classes(self) :
         return self.classes
@@ -86,6 +87,7 @@ class voc_seg(Dataset):
         base = self.data_list[idx]
         label = os.path.join(self.label_path, base)
         image = os.path.join(self.image_path, base.replace(".png", ".jpg"))
+        file_name = os.path.join(self.image_path, base.replace(".png", ".jpg"))
 
         image = Image.open(image)
         image = self.resize(image)
@@ -109,7 +111,7 @@ class voc_seg(Dataset):
 
         label = torch.tensor(label)
 
-        return image, label 
+        return image, label, file_name
     
     def get_classes(self) :
         return self.classes
