@@ -1,5 +1,6 @@
 import dataset
 import torch 
+import torch.nn.functional as F
 import copy
 import time
 from torch import nn 
@@ -18,7 +19,7 @@ from unet import Unet2D
 from utils import optimize_linear
 from losses import DiceLoss, SmoothCrossEntropyLoss
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_score, average_precision_score
+from sklearn.metrics import accuracy_score, precision_score, average_precision_score, jaccard_score
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", default="segmentation", type=str, help="Task Type, For example segmentation or classification")
@@ -37,22 +38,28 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="classification")
     start_time = time.time()
     sum_total = 0 
 
-    for i, (image, target) in enumerate(trn_loader) :
+    for i, (image, target, file_name) in enumerate(trn_loader) :
         model.train()
         x = image.cuda()
         y = target.cuda()
         y_pred = model(x)  
+        ious = np.zeros((21,))
 
         if mode == "segmentation" : 
             loss = criterion(y_pred, y.long())
+            pred= F.softmax(y_pred, dim= 1)
+            _, max_index = torch.max(pred, 1)
+            index_flatten = max_index.view(-1).cpu()
+            target_flatten = target.view(-1).cpu()
+            li = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+            iou = jaccard_score(index_flatten, target_flatten, labels=li ,average=None)
+            ious += iou
             measure = 0
 
         elif mode == "classification" :
             loss = criterion(y_pred, y)
-
             pos_probs = torch.sigmoid(y_pred)
             pos_preds = (pos_probs > 0.5).float()
-            
             tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
             tm1 = len(target) * 20
             acc = tmp/tm1
@@ -73,6 +80,8 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="classification")
 
     trn_loss = trn_loss/len(trn_loader)
     total_measure = sum_total / len(trn_loader)
+    if mode == "segmentation" : 
+        total_measure = ious
 
     if epoch == 24 or epoch == 49 or epoch == 74 or epoch == 99  or epoch == 124 or epoch == 149 or epoch == 174 or epoch == 199: 
         torch.save(model.state_dict(), '{0}{1}_{2}_{3}.pth'.format("./", 'model', epoch, args.exp))
@@ -83,13 +92,12 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
     val_loss = 0 
     model.eval()
     adv_losses = 0
-    sum_iou = 0 
-    adv_sum_iou = 0
     start_time = time.time()
     sum_total = 0 
+    ious = np.zeros((21, ))
 
     if args.method == 'adv' :
-        for i, (data, target) in enumerate(val_loader) :
+        for i, (data, target, file_name) in enumerate(val_loader) :
             x = data.cuda()
             y = target.cuda()
             x_clone = Variable(x.clone().detach(), requires_grad=True).cuda()
@@ -115,6 +123,13 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
 
             if mode == "segmentation" : 
                 adv_loss = criterion_fn(adv_y_pred, y.detach().long())
+                pred= F.softmax(adv_y_pred, dim= 1)
+                _, max_index = torch.max(pred, 1)
+                index_flatten = max_index.view(-1).cpu()
+                target_flatten = target.view(-1).cpu()
+                li = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+                iou = jaccard_score(index_flatten, target_flatten, labels=li, average=None)
+                ious += iou
                 measure = 0 
 
             elif mode == "classification" :
@@ -138,7 +153,7 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
             start_time = time.time()
     else  :
         with torch.no_grad() :
-            for i, (data, target) in enumerate(val_loader) :
+            for i, (data, target, file_name) in enumerate(val_loader) :
                 x = data.cuda()
                 y = target.cuda()
 
@@ -146,6 +161,13 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
 
                 if mode == "segmentation" : 
                     loss = criterion(y_pred, y.long())
+                    pred= F.softmax(y_pred, dim= 1)
+                    _, max_index = torch.max(pred, 1)
+                    index_flatten = max_index.view(-1).cpu()
+                    target_flatten = target.view(-1).cpu()
+                    li = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+                    iou = jaccard_score(index_flatten, target_flatten, labels=li, average=None)
+                    ious += iou
                     measure = 0 
 
                 elif mode == "classification" :
@@ -165,20 +187,19 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
                 print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), loss.item(), end_time-start_time, measure))
                 start_time = time.time()
 
-    
-    if mode == "segmentation" : 
-        pass
-    elif mode == "classification" :
-        pass
 
     if args.method != 'adv' :
         val_loss = val_loss / len(val_loader)
         mean_total = sum_total / len(val_loader)
+        if mode == "segmentation" : 
+            mean_total = ious 
         return val_loss, mean_total
 
     else : 
         adv_losses /= len(val_loader)
         mean_total = sum_total / len(val_loader)
+        if mode == "segmentation" : 
+            mean_total = ious 
         return adv_losses, mean_total
     
 def main():
