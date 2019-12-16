@@ -219,7 +219,8 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
 
     else : 
         adv_losses /= len(val_loader)
-        mean_total = sum_total / len(val_loader)
+#         mean_total = sum_total / len(val_loader)
+        mean_total = average_precision_score(total_target, total_prob)
         if mode == "segmentation" : 
             mean_total = ious 
         print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i+1, len(val_loader), adv_losses, end_time - start_time, mean_total))
