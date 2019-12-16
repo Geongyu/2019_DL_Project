@@ -31,7 +31,7 @@ parser.add_argument('--method', default="adv", type=str)
 parser.add_argument("--exp", default="Test", type=str)
 parser.add_argument("--tricks", default="None", type=str)
 parser.add_argument("--batch-train", default=32, type=int)
-parser.add_argument("--batch_val", default=16, type=int)
+parser.add_argument("--batch-val", default=16, type=int)
 args = parser.parse_args()
 
 def train(model, trn_loader, criterion, optimizer, epoch, mode="classification"):
