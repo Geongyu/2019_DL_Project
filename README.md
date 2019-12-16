@@ -5,16 +5,17 @@ Professor: Sangheum Hwang \
 Semester: Fall 
 
 ## Members
-<center>
+
 | Name | Students Number | 
 | :------: | :------: |
 | Jihyo Kim | 18512083 | 
 | Hongjea Park | 19510099 | 
 | Geongyu Lee | 19510101 | 
 | Sohee Ha | 19512024 |
-</center>
+
 
 ## Dependency 
+
 - torch 
 - argparse
 - torchvision
@@ -24,6 +25,7 @@ Semester: Fall
 
 
 ## Data Sets Statistics 
+
 | Classes | Images | Objects |
 | -------- | :------: | --------- |
 | Aeroplane | 116 | 136 |
@@ -48,8 +50,13 @@ Semester: Fall
 | Tvmonitor | 113 | 148 |
 | Total | 1928 | 4203 |
 
+## Images 
+
+
+
 
 ## Privacy & Term 
+
 @misc{pascal-voc-2010,
 	author = "Everingham, M. and Van~Gool, L. and Williams, C. K. I. and Winn, J. and Zisserman, A.",
 	title = "The {PASCAL} {V}isual {O}bject {C}lasses {C}hallenge 2010 {(VOC2010)} {R}esults",
