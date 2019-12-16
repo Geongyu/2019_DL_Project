@@ -38,12 +38,16 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="classification")
     start_time = time.time()
     sum_total = 0 
 
+    total_prob = np.zeros((0,20))
+    total_target = np.zeros((0,20))
     for i, (image, target, file_name) in enumerate(trn_loader) :
         model.train()
         x = image.cuda()
         y = target.cuda()
         y_pred = model(x)  
         ious = np.zeros((21,))
+        
+        total_target = np.concatenate((total_target, target))
 
         if mode == "segmentation" : 
             loss = criterion(y_pred, y.long())
@@ -59,12 +63,13 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="classification")
         elif mode == "classification" :
             loss = criterion(y_pred, y)
             pos_probs = torch.sigmoid(y_pred)
-            pos_preds = (pos_probs > 0.5).float()
-            tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
-            tm1 = len(target) * 20
-            acc = tmp/tm1
-            sum_total += acc  
-            measure = acc
+            total_prob = np.concatenate((total_prob, pos_probs.detach().cpu().numpy()))
+#             pos_preds = (pos_probs > 0.5).float()
+#             tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
+#             tm1 = len(target) * 20
+#             acc = tmp/tm1
+#             sum_total += acc  
+#             measure = acc
 
             #precision_score(pos_preds.cpu(), target.cpu(), average="macro") 
                 
@@ -75,17 +80,21 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="classification")
         trn_loss += (loss)
 
         end_time = time.time()
-        print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{5:.3f}]".format(epoch, i, len(trn_loader), loss.item(), end_time-start_time, measure))
+#         print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{5:.3f}]".format(epoch, i, len(trn_loader), loss.item(), end_time-start_time, measure))
+        print(" [Training] [{0}] [{1}/{2}]".format(epoch, i, len(trn_loader)))
         start_time = time.time()
 
     trn_loss = trn_loss/len(trn_loader)
-    total_measure = sum_total / len(trn_loader)
+#     total_measure = sum_total / len(trn_loader)
+    total_measure = average_precision_score(total_target, total_prob)
+
     if mode == "segmentation" : 
         total_measure = ious
 
     if epoch == 24 or epoch == 49 or epoch == 74 or epoch == 99  or epoch == 124 or epoch == 149 or epoch == 174 or epoch == 199: 
         torch.save(model.state_dict(), '{0}{1}_{2}_{3}.pth'.format("./", 'model', epoch, args.exp))
 
+    print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{5:.3f}]".format(epoch, i+1, len(trn_loader), trn_loss, end_time - start_time, total_measure))
     return trn_loss, total_measure
 
 def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode="segmentation"):
@@ -96,10 +105,15 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
     sum_total = 0 
     ious = np.zeros((21, ))
 
+    total_prob = np.zeros((0, 20))
+    total_target = np.zeros((0, 20))
     if args.method == 'adv' :
         for i, (data, target, file_name) in enumerate(val_loader) :
             x = data.cuda()
             y = target.cuda()
+            
+            total_target = np.concatenate((total_target, target))
+            
             x_clone = Variable(x.clone().detach(), requires_grad=True).cuda()
             model_fn = copy.deepcopy(model)
 
@@ -137,26 +151,30 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
                 pos_probs = torch.sigmoid(adv_y_pred)
                 pos_preds = (pos_probs > 0.5).float()
                 adv_loss = criterion_fn(adv_y_pred, y.detach())
+                total_prob = np.concatenate((total_prob, pos_probs.detach().cpu().numpy()))
                 
-                tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
-                tm1 = len(target) * 20
-                acc = tmp/tm1
-                sum_total += acc  
-                measure = acc
+#                 tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
+#                 tm1 = len(target) * 20
+#                 acc = tmp/tm1
+#                 sum_total += acc  
+#                 measure = acc
 
             adv_losses += adv_loss.item()
             
             optimizer.zero_grad()
 
             end_time = time.time()
-            print(" [Validation] [{0}] [{1}/{2}] Adv. Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), adv_loss.item(), end_time-start_time, measure))
+#             print(" [Validation] [{0}] [{1}/{2}] Adv. Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), adv_loss.item(), end_time-start_time, measure))
+            print(" [Validation] [{0}] [{1}/{2}]".format(epoch, i+1, len(val_loader)))
             start_time = time.time()
     else  :
         with torch.no_grad() :
             for i, (data, target, file_name) in enumerate(val_loader) :
                 x = data.cuda()
                 y = target.cuda()
-
+                
+                total_target = np.concatenate((total_target, target))
+                
                 y_pred = model(x)
 
                 if mode == "segmentation" : 
@@ -174,25 +192,29 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
                     loss = criterion(y_pred, y)
                     pos_probs = torch.sigmoid(y_pred)
                     pos_preds = (pos_probs > 0.5).float()
+                    total_prob = np.concatenate((total_prob, pos_probs.detach().cpu().numpy()))
                     
-                    tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
-                    tm1 = len(target) * 20
-                    acc = tmp/tm1
-                    sum_total += acc  
-                    measure = acc
+#                     tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
+#                     tm1 = len(target) * 20
+#                     acc = tmp/tm1
+#                     sum_total += acc  
+#                     measure = acc
 
                 val_loss += (loss)
 
                 end_time = time.time()
-                print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), loss.item(), end_time-start_time, measure))
+#                 print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), loss.item(), end_time-start_time, measure))
+                print(" [Validation] [{0}] [{1}/{2}]".format(epoch, i+1, len(val_loader)))
                 start_time = time.time()
 
 
     if args.method != 'adv' :
         val_loss = val_loss / len(val_loader)
-        mean_total = sum_total / len(val_loader)
+#         mean_total = sum_total / len(val_loader)
+        mean_total = average_precision_score(total_target, total_prob)
         if mode == "segmentation" : 
             mean_total = ious 
+        print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i+1, len(val_loader), val_loss, end_time - start_time, mean_total))
         return val_loss, mean_total
 
     else : 
@@ -200,6 +222,7 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
         mean_total = sum_total / len(val_loader)
         if mode == "segmentation" : 
             mean_total = ious 
+        print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i+1, len(val_loader), adv_losses, end_time - start_time, mean_total))
         return adv_losses, mean_total
     
 def main():
