@@ -61,3 +61,13 @@ Semester: Fall
 	author = "Everingham, M. and Van~Gool, L. and Williams, C. K. I. and Winn, J. and Zisserman, A.",
 	title = "The {PASCAL} {V}isual {O}bject {C}lasses {C}hallenge 2010 {(VOC2010)} {R}esults",
 	howpublished = "http://www.pascal-network.org/challenges/VOC/voc2010/workshop/index.html"}
+	
+## Reference 
+
+[1] Improved Regularization of Convolutional Neural Networks with Cutout, DeVries et al.
+[2] When Does Label Smoothing Help?, Müller et al.
+[3] U-Net: Convolutional Networks for Biomedical Image Segmentation, Ronneberger et al.
+[4] Deep Residual Learning for Image Recognition, He et al.
+[5] EXPLAINING AND HARNESSING ADVERSARIAL EXAMPLES, Goodfellow et al.
+[6] Adversarial Robustness via Label-Smoothing, Goibert et al.
+
