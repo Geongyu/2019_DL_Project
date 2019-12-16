@@ -180,18 +180,6 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
         adv_losses /= len(val_loader)
         mean_total = sum_total / len(val_loader)
         return adv_losses, mean_total
-
-
-def draw_plot(real_photo, segmentationmap, predict_map) :
-    import matplotlib.pyplot as plt 
-    import seaborn as sns 
-    #from PIL import Image 
-    #palette = torch.tensor([2 ** 25 - 1, 2 ** 15 - 1, 2 ** 21 - 1])
-    #colors = torch.as_tensor([i for i in range(21)])[:, None] * palette
-    #colors = (colors % 255).numpy().astype("uint8")
-    #r = Image.fromarray(y_pred[0].byte().cpu().numpy().astype("uint8").reshape(256, 256))
-    #r.putpalette(colors)
-    #r.save("test3.png") 
     
 def main():
     if args.mode == "segmentation" :
@@ -201,66 +189,44 @@ def main():
         if args.tricks == "cut-out" :
             trainset = dataset.voc_seg(label_path, image_path, cut_out=True, smooth=False)
             valset = dataset.voc_seg(label_path, image_path, cut_out=False, smooth=False)
-            total_idx = list(range(len(trainset)))
-            split_idx = int(len(trainset) * 0.7)
-            trn_idx = total_idx[:split_idx]
-            val_idx = total_idx[split_idx:]
-        elif args.tricks == "smoothing" :
+        elif args.tricks == "smooth" :
             trainset = dataset.voc_seg(label_path, image_path, cut_out=False, smooth=True)
             valset = dataset.voc_seg(label_path, image_path, cut_out=False, smooth=False)
-            total_idx = list(range(len(trainset)))
-            split_idx = int(len(trainset) * 0.7)
-            trn_idx = total_idx[:split_idx]
-            val_idx = total_idx[split_idx:]
         elif args.tricks == "all" :
             trainset = dataset.voc_seg(label_path, image_path, cut_out=True, smooth=True)
             valset = dataset.voc_seg(label_path, image_path, cut_out=False, smooth=False)
-            total_idx = list(range(len(trainset)))
-            split_idx = int(len(trainset) * 0.7)
-            trn_idx = total_idx[:split_idx]
-            val_idx = total_idx[split_idx:]
         else :
             trainset = dataset.voc_seg(label_path, image_path, cut_out=False, smooth = False)
-            total_idx = list(range(len(trainset)))
-            split_idx = int(len(trainset) * 0.7)
-            trn_idx = total_idx[:split_idx]
-            val_idx = total_idx[split_idx:]
+        
+        total_idx = list(range(len(trainset)))
+        split_idx = int(len(trainset) * 0.7)
+        trn_idx = total_idx[:split_idx]
+        val_idx = total_idx[split_idx:]
 
     elif args.mode == "classification" :
         info_path = "seg_da/VOCdevkit/VOC2010/SegmentationClass/"
         image_path = "seg_da/VOCdevkit/VOC2010/JPEGImages"
 
-        if args.tricks == "smoothing" :
+        if args.tricks == "smooth" :
             trainset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth = True)
             valset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth = False)
-            total_idx = list(range(len(trainset)))
-            split_idx = int(len(trainset) * 0.7)
-            trn_idx = total_idx[:split_idx]
-            val_idx = total_idx[split_idx:]
         elif args.tricks == "cut-out" :
             trainset = dataset.voc_cls(info_path, image_path, cut_out=True, smooth=True)
             valset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth=False)
-            total_idx = list(range(len(trainset)))
-            split_idx = int(len(trainset) * 0.7)
-            trn_idx = total_idx[:split_idx]
-            val_idx = total_idx[split_idx:]
         elif args.tricks == "all" :
             trainset = dataset.voc_cls(info_path, image_path, cut_out=True, smooth =True)
             valset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth=False)
-            total_idx = list(range(len(trainset)))
-            split_idx = int(len(trainset) * 0.7)
-            trn_idx = total_idx[:split_idx]
-            val_idx = total_idx[split_idx:]
         else :
             trainset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth=False)
-            total_idx = list(range(len(trainset)))
-            split_idx = int(len(trainset) * 0.7)
-            trn_idx = total_idx[:split_idx]
-            val_idx = total_idx[split_idx:]
+
+        total_idx = list(range(len(trainset)))
+        split_idx = int(len(trainset) * 0.7)
+        trn_idx = total_idx[:split_idx]
+        val_idx = total_idx[split_idx:]
     else : 
         raise NotImplementedError
 
-    if args.tricks == "smoothing" or args.tricks == "cut-off" or args.tricks == "all" :
+    if args.tricks == "smooth" or args.tricks == "cut-out" or args.tricks == "all" :
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_train, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
         testloader = torch.utils.data.DataLoader(valset, batch_size=args.batch_val, shuffle=False, sampler=SubsetRandomSampler(val_idx))
     else :
@@ -280,6 +246,8 @@ def main():
         optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
     elif args.optim == 'radam' :
         optimizer = RAdam(net.parameters(), lr = 0.0001)
+    else : 
+        raise NotImplementedError
 
     net = nn.DataParallel(net).cuda()
     cudnn.benchmark = True
@@ -295,7 +263,6 @@ def main():
     elif args.loss_function == "cross_entropy" :
         criterion = nn.CrossEntropyLoss().cuda()
         criterion_fn = nn.CrossEntropyLoss().cuda()
-
     else :
         raise NotImplementedError
     
