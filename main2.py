@@ -199,28 +199,28 @@ def main():
         image_path = "seg_da/VOCdevkit/VOC2010/JPEGImages"
 
         if args.tricks == "cut-out" :
-            trainset = dataset.voc_seg(label_path, image_path, cut_out=True, smoothing=False)
-            valset = dataset.voc_seg(label_path, image_path, cut_out=False, smoothing=False)
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=True, smooth=False)
+            valset = dataset.voc_seg(label_path, image_path, cut_out=False, smooth=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
         elif args.tricks == "smoothing" :
-            trainset = dataset.voc_seg(label_path, image_path, cut_out=False, smoothing=True)
-            valset = dataset.voc_seg(label_path, image_path, cut_out=False, smoothing=False)
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=False, smooth=True)
+            valset = dataset.voc_seg(label_path, image_path, cut_out=False, smooth=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
         elif args.tricks == "all" :
-            trainset = dataset.voc_seg(label_path, image_path, cut_out=True, smoothing=True)
-            valset = dataset.voc_seg(label_path, image_path, cut_out=False, smoothing=False)
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=True, smooth=True)
+            valset = dataset.voc_seg(label_path, image_path, cut_out=False, smooth=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
         else :
-            trainset = dataset.voc_seg(label_path, image_path, cut_out=False, smoothing=False)
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=False, smooth = False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
@@ -231,28 +231,28 @@ def main():
         image_path = "seg_da/VOCdevkit/VOC2010/JPEGImages"
 
         if args.tricks == "smoothing" :
-            trainset = dataset.voc_cls(info_path, image_path)
-            valset = dataset.voc_cls(info_path, image_path, cut_out=False)
+            trainset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth = True)
+            valset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth = False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
         elif args.tricks == "cut-out" :
-            trainset = dataset.voc_cls(info_path, image_path, cut_out=True)
-            valset = dataset.voc_cls(info_path, image_path, cut_out=False)
+            trainset = dataset.voc_cls(info_path, image_path, cut_out=True, smooth=True)
+            valset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
         elif args.tricks == "all" :
-            trainset = dataset.voc_cls(info_path, image_path, cut_out=True)
-            valset = dataset.voc_cls(info_path, image_path, cut_out=False)
+            trainset = dataset.voc_cls(info_path, image_path, cut_out=True, smooth =True)
+            valset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
         else :
-            trainset = dataset.voc_cls(info_path, image_path)
+            trainset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
