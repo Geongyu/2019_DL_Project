@@ -5,9 +5,12 @@ Professor: Sangheum Hwang \
 Semester: Fall 
 
 ## Members
-| Name | Students Number | Name | Students Number | Name | Students Number | Name | Students Number |
-| :------: | :------: | :------: | :------: | :------: | :------: | :------: | :------: |
-| Jihyo Kim | 18512083 | Hongjea Park | 19510099 | Geongyu Lee | 19510101 | Sohee Ha | 19512024 |
+| Name | Students Number | 
+| :------: | :------: |
+| Jihyo Kim | 18512083 | 
+| Hongjea Park | 19510099 | 
+| Geongyu Lee | 19510101 | 
+| Sohee Ha | 19512024 |
 
 ## Dependency 
 - torch 
