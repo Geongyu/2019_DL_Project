@@ -4,6 +4,10 @@ Class: Neural Network And Deep Learning (Graduate Class, Dept. of Data Science, 
 Professor: Sangheum Hwang \
 Semester: Fall 
 
+## Members
+| Name | Students Number | Name | Students Number | Name | Students Number | Name | Students Number |
+| :------: | :------: | :------: | :------: | :------: | :------: | :------: | :------: |
+| Jihyo Kim | 18512083 | Hongjea Park | 19510099 | Geongyu Lee | 19510101 | Sohee Ha | 19512024 |
 
 ## Dependency 
 - torch 
@@ -11,6 +15,7 @@ Semester: Fall
 - torchvision
 - medpy
 - sklearn
+- from torchvision.datasets import VOCSegmentation (should be download images)
 
 
 ## Data Sets Statistics 
