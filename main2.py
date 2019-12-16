@@ -30,6 +30,8 @@ parser.add_argument("--epochs", default=50, type=int)
 parser.add_argument('--method', default="adv", type=str)
 parser.add_argument("--exp", default="Test", type=str)
 parser.add_argument("--tricks", default="None", type=str)
+parser.add_argument("--batch-train", default=32, type=int)
+parser.add_argument("--batch_val", default=16, type=int)
 args = parser.parse_args()
 
 def train(model, trn_loader, criterion, optimizer, epoch, mode="classification"):
@@ -41,9 +43,8 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="classification")
         model.train()
         x = image.cuda()
         y = target.cuda()
-        y_pred = model(x)
-        import ipdb; ipdb.set_trace()
-        
+        y_pred = model(x)  
+
         if mode == "segmentation" : 
             loss = criterion(y_pred, y.long())
 
@@ -201,15 +202,20 @@ def main():
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
-        
         elif args.tricks == "cut-off" :
-            trainset = dataset.voc_seg(label_path, image_path, cut_out=True)
-            valset = dataset.voc_seg(label_path, image_path, cut_out=False)
+            trainset = dataset.voc_cls(label_path, image_path, cut_out=True)
+            valset = dataset.voc_cls(label_path, image_path, cut_out=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
-
+        elif args.tricks == "all" :
+            trainset = dataset.voc_cls(label_path, image_path, cut_out=True)
+            valset = dataset.voc_cls(label_path, image_path, cut_out=False)
+            total_idx = list(range(len(trainset)))
+            split_idx = int(len(trainset) * 0.7)
+            trn_idx = total_idx[:split_idx]
+            val_idx = total_idx[split_idx:]
         else :
             trainset = dataset.voc_cls(info_path, image_path)
             total_idx = list(range(len(trainset)))
@@ -219,8 +225,8 @@ def main():
     else : 
         raise NotImplementedError
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=32, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
-    testloader = torch.utils.data.DataLoader(trainset, batch_size=16, shuffle=False, sampler=SubsetRandomSampler(val_idx))
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_train, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
+    testloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_val, shuffle=False, sampler=SubsetRandomSampler(val_idx))
 
     if args.mode == "segmentation" :
         net = Unet2D((3, 256, 256), 1, 0.1, num_classes=21)
@@ -234,7 +240,7 @@ def main():
     elif args.optim == 'adam' :
         optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
     elif args.optim == 'radam' :
-        optimizer = RAdam(net.parameters(), lr = 0.001)
+        optimizer = RAdam(net.parameters(), lr = 0.0001)
 
     net = nn.DataParallel(net).cuda()
     cudnn.benchmark = True
@@ -251,9 +257,6 @@ def main():
         criterion = nn.CrossEntropyLoss().cuda()
         criterion_fn = nn.CrossEntropyLoss().cuda()
 
-    elif args.loss_function == "smoothing" :
-        criterion = nn.BCEWithLogitsLoss().cuda()
-        criterion_fn = nn.BCEWithLogitsLoss().cuda()
     else :
         raise NotImplementedError
     
