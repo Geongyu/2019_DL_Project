@@ -39,7 +39,7 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="classification")
     start_time = time.time()
     sum_iou = 0 
     sum_acc = 0 
-    
+
     for i, (image, target) in enumerate(trn_loader) :
         model.train()
         x = image.cuda()
@@ -197,22 +197,22 @@ def main():
         image_path = "seg_da/VOCdevkit/VOC2010/JPEGImages"
 
         if args.tricks == "smoothing" :
-            trainset = dataset.voc_cls_smoothing(label_path, image_path)
-            valset = dataset.voc_cls(label_path, image_path, cut_out=False)
+            trainset = dataset.voc_cls(info_path, image_path)
+            valset = dataset.voc_cls(info_path, image_path, cut_out=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
         elif args.tricks == "cut-off" :
-            trainset = dataset.voc_cls(label_path, image_path, cut_out=True)
-            valset = dataset.voc_cls(label_path, image_path, cut_out=False)
+            trainset = dataset.voc_cls(info_path, image_path, cut_out=True)
+            valset = dataset.voc_cls(info_path, image_path, cut_out=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
         elif args.tricks == "all" :
-            trainset = dataset.voc_cls(label_path, image_path, cut_out=True)
-            valset = dataset.voc_cls(label_path, image_path, cut_out=False)
+            trainset = dataset.voc_cls(info_path, image_path, cut_out=True)
+            valset = dataset.voc_cls(info_path, image_path, cut_out=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
@@ -226,8 +226,12 @@ def main():
     else : 
         raise NotImplementedError
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_train, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
-    testloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_val, shuffle=False, sampler=SubsetRandomSampler(val_idx))
+    if args.tricks == "smoothing" or args.tricks == "cut-off" or args.tricks == "all" :
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_train, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
+        testloader = torch.utils.data.DataLoader(valset, batch_size=args.batch_val, shuffle=False, sampler=SubsetRandomSampler(val_idx))
+    else :
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_train, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
+        testloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_val, shuffle=False, sampler=SubsetRandomSampler(val_idx))
 
     if args.mode == "segmentation" :
         net = Unet2D((3, 256, 256), 1, 0.1, num_classes=21)
