@@ -21,7 +21,7 @@ Semester: Fall
 - torchvision
 - medpy
 - sklearn
-- from torchvision.datasets import VOCSegmentation (should be download images)
+- from torchvision.datasets import VOCSegmentation (Images should be downloaded for the first time.)
 
 
 ## Data Sets Statistics 
