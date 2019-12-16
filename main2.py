@@ -96,10 +96,10 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
             model_fn = copy.deepcopy(model)
 
             if mode == "segmentation" : 
-                loss_fn = criterion_fn(model_fn(x_clone), y.long())
+                loss_fn = criterion_fn(model_fn(x_clone), y.long().detach())
 
             elif mode == "classification" :
-                loss_fn = criterion_fn(model_fn(x_clone), y)
+                loss_fn = criterion_fn(model_fn(x_clone), y.detach())
 
             optimizer.zero_grad()
             loss_fn.backward()
