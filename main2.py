@@ -28,8 +28,8 @@ parser.add_argument("--epochs", default=50, type=int)
 parser.add_argument('--method', default="adv", type=str)
 parser.add_argument("--exp", default="Test", type=str)
 parser.add_argument("--tricks", default="None", type=str)
-parser.add_argument("--batch-train", default=4, type=int)
-parser.add_argument("--batch-val", default=1, type=int)
+parser.add_argument("--batch-train", default=32, type=int)
+parser.add_argument("--batch-val", default=32, type=int)
 args = parser.parse_args()
 
 def train(model, trn_loader, criterion, optimizer, epoch, mode="classification"):
@@ -96,10 +96,10 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
             model_fn = copy.deepcopy(model)
 
             if mode == "segmentation" : 
-                loss_fn = criterion_fn(model_fn(x_clone), y.long().detach())
+                loss_fn = criterion_fn(model_fn(x_clone), y.long())
 
             elif mode == "classification" :
-                loss_fn = criterion_fn(model_fn(x_clone), y.detach())
+                loss_fn = criterion_fn(model_fn(x_clone), y)
 
             optimizer.zero_grad()
             loss_fn.backward()
@@ -111,7 +111,6 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
             # make adversarial samples
             adv_x = Variable(x_clone+scaled_perturbation, requires_grad=True).cuda()
             
-            # put acv_x into the model
             adv_y_pred = model_fn(adv_x)
 
             if mode == "segmentation" : 
@@ -200,28 +199,28 @@ def main():
         image_path = "seg_da/VOCdevkit/VOC2010/JPEGImages"
 
         if args.tricks == "cut-out" :
-            trainset = dataset.voc_seg(label_path, image_path, cut_out=True)
-            valset = dataset.voc_seg(label_path, image_path, cut_out=False)
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=True, smoothing=False)
+            valset = dataset.voc_seg(label_path, image_path, cut_out=False, smoothing=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
         elif args.tricks == "smoothing" :
-            trainset = dataset.voc_seg(label_path, image_path, cut_out=False)
-            valset = dataset.voc_seg(label_path, image_path, cut_out=False)
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=False, smoothing=True)
+            valset = dataset.voc_seg(label_path, image_path, cut_out=False, smoothing=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
         elif args.tricks == "all" :
-            trainset = dataset.voc_seg(label_path, image_path, cut_out=True)
-            valset = dataset.voc_seg(label_path, image_path, cut_out=False)
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=True, smoothing=True)
+            valset = dataset.voc_seg(label_path, image_path, cut_out=False, smoothing=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]
             val_idx = total_idx[split_idx:]
         else :
-            trainset = dataset.voc_seg(label_path, image_path, cut_out=False)
+            trainset = dataset.voc_seg(label_path, image_path, cut_out=False, smoothing=False)
             total_idx = list(range(len(trainset)))
             split_idx = int(len(trainset) * 0.7)
             trn_idx = total_idx[:split_idx]

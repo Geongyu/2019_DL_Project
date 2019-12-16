@@ -11,35 +11,11 @@ from PIL import Image
 object_categories = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 
                         'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
 
-def read_all(path):
-    dataest = []
-    files = os.listdir(path)
-    for fi in files:
-        if('trainval' not in fi):
-            num = long(1)
-            for i,str in enumerate(object_categories,long(1)):
-                if (str in fi):
-                    num = i
-                    break
-            if('train' in fi):
-                f = open(path+"/"+fi)
-                iter_f = iter(f)
-                for line in iter_f:
-                    line = line[0:11]
-                    dataest.append([line,num])
-            else:
-                f = open(path+"/"+fi)
-                iter_f = iter(f)
-                for line in iter_f:
-                    line = line[0:11]
-                    dataest.append([line,num])
-    return dataest
-
 class voc_cls(Dataset):
     def __init__(self, label_path, image_path, cut_out=False, smooth=False) :
         self.label_path = label_path
         self.image_path = image_path
-        self.classes = ["background", 'aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 
+        self.classes = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 
                         'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
 
         self.data_list = os.listdir(label_path)
@@ -82,8 +58,6 @@ class voc_cls(Dataset):
         if self.smooth == True :
             case = case - 0.01
             case = np.abs(case)
-
-        
 
         return image, case 
     
@@ -139,8 +113,6 @@ class voc_seg(Dataset):
     
     def get_classes(self) :
         return self.classes
-
-
 
 def cutout(mask_size, p, cutout_inside, mask_color=(0, 0, 0)):
     mask_size_half = mask_size // 2
