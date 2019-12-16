@@ -14,29 +14,29 @@ Semester: Fall
 
 
 ## Data Sets Statistics 
-| Classes | Images |
-| -------- | :------: |
-| Aeroplane | 579 |
-| Bicycle | 471 |
-| Bird | 666 |
-| Boat | 432 |
-| Bottle | 583 |
-| Bus | 353 |
-| Car | 1030 |
-| Cat | 1005 |
-| Chair | 925 |
-| Cow | 248 |
-| Diningtable | 415 |
-| Dog | 1199 |
-| Horse | 425 |
-| Motorbike | 453 |
-| Person | 3548 |
-| Pottedplant | 450 |
-| Sheep | 290 |
-| Sofa | 406 |
-| Train | 453 |
-| Tvmonitor | 490 |
-| Total | 10103 |
+| Classes | Images | Objects |
+| -------- | :------: | --------- |
+| Aeroplane | 116 | 136 |
+| Bicycle | 97 | 124 |
+| Bird | 136 | 176 |
+| Boat | 106 | 153 |
+| Bottle | 117 | 176 |
+| Bus | 99 | 147 |
+| Car | 161 | 276 |
+| Cat | 169 | 195 |
+| Chair | 170 | 348 |
+| Cow | 82 | 161 |
+| Diningtable | 104 | 108 |
+| Dog | 156 | 194 |
+| Horse | 105 | 136 |
+| Motorbike | 103 | 126 |
+| Person | 526 | 925 |
+| Pottedplant | 115 | 209 |
+| Sheep | 83 | 209 |
+| Sofa | 117 | 138 |
+| Train | 106 | 118 |
+| Tvmonitor | 113 | 148 |
+| Total | 1928 | 4203 |
 
 
 ## Privacy & Term 
