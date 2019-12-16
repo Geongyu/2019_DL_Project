@@ -6,12 +6,12 @@ Semester: Fall
 
 ## Members
 
-| Name | Students Number | 
+| Students Number | Name |
 | :------: | :------: |
-| Jihyo Kim | 18512083 | 
-| Hongjea Park | 19510099 | 
-| Geongyu Lee | 19510101 | 
-| Sohee Ha | 19512024 |
+| 18512083 | Jihyo Kim | 
+| 19510099 | Hongjea Park | 
+| 19510101 | Geongyu Lee | 
+| 19512024 | Sohee Ha |
 
 
 ## Dependency 
