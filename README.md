@@ -69,12 +69,21 @@ Semester: Fall
 
 ## Segmentation Results
 
+[DOG]
 ![result_50_eopch_Segmentation_Smoothing_0](https://user-images.githubusercontent.com/37532168/70983492-30280d00-20fc-11ea-8a1a-26460f89b2ab.png)
 ![result_50_eopch_Segmentation Baseline_0](https://user-images.githubusercontent.com/37532168/70983494-30280d00-20fc-11ea-9bee-588824d72bc3.png)
 ![result_50_eopch_Segmentation_ADV_0](https://user-images.githubusercontent.com/37532168/70983495-30c0a380-20fc-11ea-8ed1-7deb2fb96e46.png)
 ![result_50_eopch_Segmentation_ADV_CutOut_0](https://user-images.githubusercontent.com/37532168/70983497-30c0a380-20fc-11ea-87dd-079f05ce3bdb.png)
 ![result_50_eopch_Segmentation_ADV_Smooth_0](https://user-images.githubusercontent.com/37532168/70983498-30c0a380-20fc-11ea-891e-33afc0913fc2.png)
 ![result_50_eopch_Segmentation_CutOut_0](https://user-images.githubusercontent.com/37532168/70983499-30c0a380-20fc-11ea-8457-98b36b6635f9.png)
+
+[HUMAN]
+![result_50_eopch_Segmentation_Smoothing_6](https://user-images.githubusercontent.com/37532168/70983645-6ebdc780-20fc-11ea-8ec5-df42c6715e58.png)
+![result_50_eopch_Segmentation Baseline_6](https://user-images.githubusercontent.com/37532168/70983647-6ebdc780-20fc-11ea-93be-09f9b37cfb29.png)
+![result_50_eopch_Segmentation_ADV_6](https://user-images.githubusercontent.com/37532168/70983651-6f565e00-20fc-11ea-968b-86b89d7fb07d.png)
+![result_50_eopch_Segmentation_ADV_CutOut_6](https://user-images.githubusercontent.com/37532168/70983652-6f565e00-20fc-11ea-990c-7421ff32b8d0.png)
+![result_50_eopch_Segmentation_ADV_Smooth_6](https://user-images.githubusercontent.com/37532168/70983653-6f565e00-20fc-11ea-86ae-ba3380912ced.png)
+![result_50_eopch_Segmentation_CutOut_6](https://user-images.githubusercontent.com/37532168/70983654-6feef480-20fc-11ea-83bb-142551ca3d25.png)
 
 
 ## Future Work 
