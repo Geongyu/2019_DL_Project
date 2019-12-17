@@ -78,6 +78,11 @@ Semester: Fall
 | label smoothing + cut-out | 		 |  		 | 
 
 
+## Pre-Trained Model Download 
+
+[Download Here](https://drive.google.com/drive/folders/18dD_dwOiHBItlqZpaBVh9C0YLx2B6mwO?usp=sharing)
+
+
 
 
 ## Privacy & Term 
