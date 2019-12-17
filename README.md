@@ -70,7 +70,7 @@ Semester: Fall
 
 ## Major Tasks
 
-| method | Base | Adversarial |
+| 	 | Base | Adversarial |
 | :------: | :------: | :------: |
 | baseline |  		 |   		 | 
 | label smoothing | 		 |   		 | 
