@@ -87,11 +87,17 @@ Semester: Fall
 	title = "The {PASCAL} {V}isual {O}bject {C}lasses {C}hallenge 2010 {(VOC2010)} {R}esults",
 	howpublished = "http://www.pascal-network.org/challenges/VOC/voc2010/workshop/index.html"}
 	
-## Reference 
+	
+## References
 
-[1] DeVries, T., & Taylor, G. W. (2017). Improved regularization of convolutional neural networks with cutout. arXiv preprint arXiv:1708.04552.  
-[2] Müller, R., Kornblith, S., & Hinton, G. (2019). When Does Label Smoothing Help?. arXiv preprint arXiv:1906.02629.
-[3] Ronneberger, O., Fischer, P., & Brox, T. (2015, October). U-net: Convolutional networks for biomedical image segmentation. In International Conference on Medical image computing and computer-assisted intervention (pp. 234-241). Springer, Cham.
-[4] He, K., Zhang, X., Ren, S., & Sun, J. (2016). Deep residual learning for image recognition. In Proceedings of the IEEE conference on computer vision and pattern recognition (pp. 770-778).
-[5] Goodfellow, I. J., Shlens, J., & Szegedy, C. (2014). Explaining and harnessing adversarial examples. arXiv preprint arXiv:1412.6572.
-[6] Goibert, M., & Dohmatob, E. (2019). Adversarial Robustness via Adversarial Label-Smoothing. arXiv preprint arXiv:1906.11567.
+[1] Goibert, M., & Dohmatob, E. (2019). Adversarial Robustness via Adversarial Label-Smoothing. arXiv preprint arXiv:1906.11567. \
+[2] He, K., Zhang, X., Ren, S., & Sun, J. (2016). Deep residual learning for image recognition. In Proceedings of the IEEE conference on computer vision and pattern recognition (pp. 770-778). \
+[3] Ronneberger, O., Fischer, P., & Brox, T. (2015, October). U-net: Convolutional networks for biomedical image segmentation. In International Conference on Medical image computing and computer-assisted intervention (pp. 234-241). Springer, Cham. \
+[4] Goodfellow, I. J., Shlens, J., & Szegedy, C. (2014). Explaining and harnessing adversarial examples. arXiv preprint arXiv:1412.6572. \
+[5] Müller, R., Kornblith, S., & Hinton, G. (2019). When Does Label Smoothing Help?. arXiv preprint arXiv:1906.02629. \
+[6] DeVries, T., & Taylor, G. W. (2017). Improved regularization of convolutional neural networks with cutout. arXiv preprint arXiv:1708.04552.  
+
+
+
+
+
