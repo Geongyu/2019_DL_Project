@@ -115,7 +115,7 @@ class voc_seg(Dataset):
 
         label = torch.tensor(label)
 
-        return image, label, file_name, smooth
+        return image, label, file_name, non_smooth
     
     def get_classes(self) :
         return self.classes
