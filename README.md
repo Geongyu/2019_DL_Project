@@ -4,7 +4,7 @@ Class: Neural Network And Deep Learning (Graduate Class, Dept. of Data Science, 
 Professor: Sangheum Hwang \
 Semester: Fall 
 
-## Members
+## Team Members
 
 | Students Number | Name |
 | :------: | :------: |
@@ -68,6 +68,16 @@ Semester: Fall
 ![KakaoTalk_20191215_222714869](https://user-images.githubusercontent.com/37532168/70934579-8c9a1680-2081-11ea-91b3-17e1e07b3867.png)
 
 
+## Major Tasks
+
+| method | Base | Adversarial |
+| :------: | :------: | :------: |
+| baseline |  		 |   		 | 
+| label smoothing | 		 |   		 | 
+| cut-out | 		 |   		 | 
+| label smoothing + cut-out | 		 |  		 | 
+
+
 
 
 ## Privacy & Term 
@@ -79,10 +89,9 @@ Semester: Fall
 	
 ## Reference 
 
-[1] Improved Regularization of Convolutional Neural Networks with Cutout, DeVries et al.  
-[2] When Does Label Smoothing Help?, Müller et al.  
-[3] U-Net: Convolutional Networks for Biomedical Image Segmentation, Ronneberger et al.  
-[4] Deep Residual Learning for Image Recognition, He et al.  
-[5] EXPLAINING AND HARNESSING ADVERSARIAL EXAMPLES, Goodfellow et al.  
-[6] Adversarial Robustness via Label-Smoothing, Goibert et al.  
-
+[1] DeVries, T., & Taylor, G. W. (2017). Improved regularization of convolutional neural networks with cutout. arXiv preprint arXiv:1708.04552.  
+[2] Müller, R., Kornblith, S., & Hinton, G. (2019). When Does Label Smoothing Help?. arXiv preprint arXiv:1906.02629.
+[3] Ronneberger, O., Fischer, P., & Brox, T. (2015, October). U-net: Convolutional networks for biomedical image segmentation. In International Conference on Medical image computing and computer-assisted intervention (pp. 234-241). Springer, Cham.
+[4] He, K., Zhang, X., Ren, S., & Sun, J. (2016). Deep residual learning for image recognition. In Proceedings of the IEEE conference on computer vision and pattern recognition (pp. 770-778).
+[5] Goodfellow, I. J., Shlens, J., & Szegedy, C. (2014). Explaining and harnessing adversarial examples. arXiv preprint arXiv:1412.6572.
+[6] Goibert, M., & Dohmatob, E. (2019). Adversarial Robustness via Adversarial Label-Smoothing. arXiv preprint arXiv:1906.11567.
