@@ -56,11 +56,13 @@ class voc_cls(Dataset):
             else :
                 case[i-1] = 1
         
+        non_smooth = case 
+        
         if self.smooth == True :
             case = case - 0.01
             case = np.abs(case)
 
-        return image, case, file_name
+        return image, case, file_name, non_smooth
     
     def get_classes(self) :
         return self.classes
@@ -105,13 +107,15 @@ class voc_seg(Dataset):
 
         label[label == 255] = 0
 
+        non_smooth = label 
+
         if self.smooth == True :
             label = label - 0.01
             label = np.abs(label)
 
         label = torch.tensor(label)
 
-        return image, label, file_name
+        return image, label, file_name, smooth
     
     def get_classes(self) :
         return self.classes
