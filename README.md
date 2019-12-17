@@ -67,6 +67,12 @@ Semester: Fall
 | label smoothing + cut-out | 		 |  		 | 
 
 
+## Future Work 
+
+- Pre-Trainied 모델로 학습
+- Adversarial Training을 통하여 얻는 이득에 비하여 얼마나 이득이 있었는지 계산하기
+- Performence measure 추가 하기
+
 ## Pre-Trained Model Download 
 
 [Download Here](https://drive.google.com/drive/folders/18dD_dwOiHBItlqZpaBVh9C0YLx2B6mwO?usp=sharing)
