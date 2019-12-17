@@ -161,7 +161,7 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
                 y = target.cuda()
 
                 y_pred = model(x)
-                if mode == "classification"
+                if mode == "classification" : 
                     total_target = np.concatenate((total_target, target))
 
                 if mode == "segmentation" : 
