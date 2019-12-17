@@ -90,7 +90,7 @@ def draw_plot(real_photo, segmentationmap, predict_map, epoch, model_name, i):
     newcolors[:25, :] = pink
     cmap = ListedColormap(newcolors)
 
-    color= ListedColormap([(c, c, c) for c in np.linspace(0, 1, 21)])
+#    color= ListedColormap([(c, c, c) for c in np.linspace(0, 1, 21)])
     
     fig= plt.figure(figsize= (21, 6))
     ax1, ax2, ax3= plt.subplot(131), plt.subplot(132), plt.subplot(133)
@@ -102,19 +102,21 @@ def draw_plot(real_photo, segmentationmap, predict_map, epoch, model_name, i):
                     labelbottom= False,
                     labelleft= False)
 
-    ax2.matshow(segmentationmap.squeeze(), cmap= cmap)
+    im2= ax2.matshow(segmentationmap.squeeze(), cmap= cmap)
     ax2.set_title('True Label')
     ax2.tick_params(axis= 'both',
                     which= 'both',
                     labeltop= False,
                     labelleft= False)
+    fig.colorbar(im2, ax= ax2)
     
-    ax3.matshow(predict_map.squeeze(), cmap= cmap)
+    im3= ax3.matshow(predict_map.squeeze(), cmap= cmap)
     ax3.set_title('Model Prediction at %s epoch %s model'%(epoch, model_name))
     ax3.tick_params(axis= 'both',
                     which= 'both',
                     labeltop= False,
                     labelleft= False)
+    fig.colorbar(im3, ax= ax3)
     
     fig.savefig('./figure/result_%s_eopch_%s_%s.png'%(epoch, model_name, i), dpi= 300)
     fig.show()
