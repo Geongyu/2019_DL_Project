@@ -10,32 +10,36 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 import numpy as np
-from PIL import Image 
-import torchvision.transforms as transforms
 
 
-def loss_plot(train_loss, valid_loss, type_, task):
+def performance_plot(perform1, perform2, perform3, perform4, model_type, label_list):
+        
+    min_len= np.min([len(perform1), len(perform2), len(perform3), len(perform4)])
     
-    '''
-        Args:
-            type_: base, ada, adt
-            task: clf or seg
-    '''
+    perform1= perform1[:min_len]
+    perform2= perform2[:min_len]
+    perform3= perform3[:min_len]
+    perform4= perform4[:min_len]
+         
+    plt.figure(figsize= (12, 6))
+    ax1, ax2= plt.subplot(121), plt.subplot(122)
     
-    train_max= np.max(train_loss)
-    valid_max= np.max(valid_loss)
+    ax1.set_title('Base-cutout segmentation loss')
+    ax1.plot(perform1, 'g', label= label_list[0])
+    ax1.plot(perform2, 'r', label= label_list[1])
+    ax1.set_ylim([0, 3])
+    ax1.legend(loc= 'upper right')
+    ax1.grid(True)
     
-    ylim= np.median([train_max, valid_max, 6])+ 1
+    ax2.set_title('Base-cutout segmentation mAP')
+    ax2.plot(perform3, 'g', label= label_list[2])
+    ax2.plot(perform4, 'r', label= label_list[3])
+    ax2.set_ylim([0, .2])
+    ax2.legend(loc= 'upper left')
+    ax2.grid(True)
     
-    plt.figure(figsize= (8, 6))
-    plt.title('%s %s Loss'%(type_, task))
-    plt.plot(train_loss, 'g', label= 'Train Loss')
-    plt.plot(valid_loss, 'r', label= 'Val Loss')
-    plt.ylim([0, ylim])
-    plt.grid(True)
-    plt.legend(loc= 'upper right')
-    plt.savefig('./figure/%s_%s_loss.png'%(type_, task), dpi= 300)
-    plt.show()
+    plt.savefig('./model_state_dict/base_seg_cutout/loss.png', dpi= 300)
+    plt.show()    
     
     
 def segmentation_output_image(sample_list, logit, epoch, col_len= 4):
@@ -88,48 +92,49 @@ def draw_plot(real_photo, segmentationmap, predict_map, epoch):
                     labeltop= False,
                     labelleft= False)
     
-    fig.savefig('./figure/result_%s_eopch.png'%epoch, dpi= 300)
+    fig.savefig('./figure/compare_result_%s_eopch.png'%epoch, dpi= 300)
     fig.show()
 
 
 if __name__== '__main__':
+        
+    perform1= torch.load("./model_state_dict/base_seg_cutout/trainloss.pkl", 
+                         map_location=torch.device('cpu'))
+    perform2= torch.load("./model_state_dict/base_seg_cutout/validloss.pkl", 
+                         map_location=torch.device('cpu'))
+    perform3= torch.load("./model_state_dict/base_seg_cutout/trainacc.pkl", 
+                         map_location=torch.device('cpu'))
+    perform3= [j.mean() for j in perform3]
     
-    real_photo= Image.open('./model_state_dict/logit_for_visualization/real_image.jpg', 'r')
-    resize = transforms.Resize((256, 256))
-    real_photo= resize(real_photo)
+    perform4= torch.load("./model_state_dict/base_seg_cutout/validacc.pkl", 
+                         map_location=torch.device('cpu'))
+    perform4= [j.mean()/169 for j in perform4]
     
-    segmentationmap= torch.load("./model_state_dict/logit_for_visualization/target.pkl", 
-                                map_location=torch.device('cpu'))
+    label_list= ['train loss', 'valid loss', 'train jac', 'valid jac']
     
-    logit= torch.load("./model_state_dict/logit_for_visualization/y_pred.pkl", 
-                      map_location=torch.device('cpu'))
-    predict_map= F.softmax(logit, dim= 1)
-    predict_map= predict_map.argmax(dim= 1)
+    min_len= np.min([len(perform1), len(perform2), len(perform3), len(perform4)])
     
-    draw_plot(real_photo, segmentationmap, predict_map, epoch= 0)
+    perform1= perform1[:min_len]
+    perform2= perform2[:min_len]
+    perform3= perform3[:min_len]
+    perform4= perform4[:min_len]
+         
+    plt.figure(figsize= (12, 6))
+    ax1, ax2= plt.subplot(121), plt.subplot(122)
     
+    ax1.set_title('Base-cutout segmentation loss')
+    ax1.plot(perform1, 'g', label= label_list[0])
+    ax1.plot(perform2, 'r', label= label_list[1])
+    ax1.set_ylim([0, 3])
+    ax1.legend(loc= 'upper right')
+    ax1.grid(True)
     
-    color= ListedColormap([(c, c, c) for c in np.linspace(0, 1, 20)])
+    ax2.set_title('Base-cutout segmentation mAP')
+    ax2.plot(perform3, 'g', label= label_list[2])
+    ax2.plot(perform4, 'r', label= label_list[3])
+    ax2.set_ylim([0, .2])
+    ax2.legend(loc= 'upper left')
+    ax2.grid(True)
     
-    fig= plt.figure(figsize= (21, 6))
-    ax1, ax2, ax3= plt.subplot(131), plt.subplot(132), plt.subplot(133)
-    ax1.imshow(np.asarray(real_photo))
-    ax1.set_title('Real Image')
-    ax1.tick_params(axis= 'both',
-                    which= 'both',
-                    labelbottom= False,
-                    labelleft= False)
-
-    ax2.matshow(segmentationmap, cmap= color)
-    ax2.set_title('True Label')
-    ax2.tick_params(axis= 'both',
-                    which= 'both',
-                    labeltop= False,
-                    labelleft= False)
-    
-    ax3.matshow(predict_map, cmap= color)
-    ax3.set_title('Model Prediction')
-    ax3.tick_params(axis= 'both',
-                    which= 'both',
-                    labeltop= False,
-                    labelleft= False)
+    plt.savefig('./model_state_dict/base_seg_cutout/loss.png', dpi= 300)
+    plt.show()    
