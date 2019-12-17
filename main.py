@@ -24,37 +24,37 @@ from sklearn.metrics import accuracy_score, precision_score, average_precision_s
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", default="segmentation", type=str, help="Task Type, For example segmentation or classification")
 parser.add_argument("--optim", default="radam", type=str, help="Optimizers")
-parser.add_argument("--loss-function", default="bce", type=str)
+parser.add_argument("--loss-function", default="cross_entropy", type=str)
 parser.add_argument("--epochs", default=50, type=int)
 parser.add_argument('--method', default="adv", type=str)
 parser.add_argument("--exp", default="Test", type=str)
 parser.add_argument("--tricks", default="None", type=str)
-parser.add_argument("--batch-train", default=32, type=int)
-parser.add_argument("--batch-val", default=32, type=int)
+parser.add_argument("--batch-train", default=8, type=int)
+parser.add_argument("--batch-val", default=8, type=int)
 args = parser.parse_args()
 
 def train(model, trn_loader, criterion, optimizer, epoch, mode="classification"):
     trn_loss = 0
     start_time = time.time()
     sum_total = 0 
-
     total_prob = np.zeros((0,20))
     total_target = np.zeros((0,20))
-    for i, (image, target, file_name) in enumerate(trn_loader) :
+
+    for i, (image, target, file_name, non_smooth_target) in enumerate(trn_loader) :
         model.train()
         x = image.cuda()
         y = target.cuda()
         y_pred = model(x)  
         ious = np.zeros((21,))
-        
-        total_target = np.concatenate((total_target, target))
+        if mode == "classification" : 
+            total_target = np.concatenate((total_target, target))
 
         if mode == "segmentation" : 
             loss = criterion(y_pred, y.long())
             pred= F.softmax(y_pred, dim= 1)
             _, max_index = torch.max(pred, 1)
             index_flatten = max_index.view(-1).cpu()
-            target_flatten = target.view(-1).cpu()
+            target_flatten = non_smooth_target.view(-1).cpu()
             li = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
             iou = jaccard_score(index_flatten, target_flatten, labels=li ,average=None)
             ious += iou
@@ -64,14 +64,6 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="classification")
             loss = criterion(y_pred, y)
             pos_probs = torch.sigmoid(y_pred)
             total_prob = np.concatenate((total_prob, pos_probs.detach().cpu().numpy()))
-#             pos_preds = (pos_probs > 0.5).float()
-#             tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
-#             tm1 = len(target) * 20
-#             acc = tmp/tm1
-#             sum_total += acc  
-#             measure = acc
-
-            #precision_score(pos_preds.cpu(), target.cpu(), average="macro") 
                 
         optimizer.zero_grad()
         loss.backward()
@@ -80,21 +72,23 @@ def train(model, trn_loader, criterion, optimizer, epoch, mode="classification")
         trn_loss += (loss)
 
         end_time = time.time()
-#         print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{5:.3f}]".format(epoch, i, len(trn_loader), loss.item(), end_time-start_time, measure))
-        print(" [Training] [{0}] [{1}/{2}]".format(epoch, i, len(trn_loader)))
         start_time = time.time()
+        print(" [Training] [{0}] [{1}/{2}]".format(epoch, i, len(trn_loader)))
 
     trn_loss = trn_loss/len(trn_loader)
-#     total_measure = sum_total / len(trn_loader)
-    total_measure = average_precision_score(total_target, total_prob)
+    if mode == "classification" :
+        total_measure = average_precision_score(total_target, total_prob)
 
     if mode == "segmentation" : 
         total_measure = ious
 
     if epoch == 24 or epoch == 49 or epoch == 74 or epoch == 99  or epoch == 124 or epoch == 149 or epoch == 174 or epoch == 199: 
-        torch.save(model.state_dict(), '{0}{1}_{2}_{3}.pth'.format("./", 'model', epoch, args.exp))
+        if not os.path.exists('/data1/workspace/geongyu/deep_lr_prj/{}-{}-{}/'.format(args.mode, args.method, args.tricks)):
+            os.makedirs('/data1/workspace/geongyu/deep_lr_prj/{}-{}-{}/'.format(args.mode, args.method, args.tricks))
+        torch.save(model.state_dict(), '/data1/workspace/geongyu/deep_lr_prj/{}-{}-{}/{}-model.pth'.format(args.mode, args.method, args.tricks, epoch))
+    
+    print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{5:.3f}]".format(epoch, i+1, len(trn_loader), trn_loss, end_time - start_time, end_time - start_time))
 
-    print(" [Training] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure = [{5:.3f}]".format(epoch, i+1, len(trn_loader), trn_loss, end_time - start_time, total_measure))
     return trn_loss, total_measure
 
 def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode="segmentation"):
@@ -104,24 +98,24 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
     start_time = time.time()
     sum_total = 0 
     ious = np.zeros((21, ))
-
     total_prob = np.zeros((0, 20))
     total_target = np.zeros((0, 20))
+
     if args.method == 'adv' :
-        for i, (data, target, file_name) in enumerate(val_loader) :
+        for i, (data, target, file_name, non_smooth_target) in enumerate(val_loader) :
             x = data.cuda()
             y = target.cuda()
-            
-            total_target = np.concatenate((total_target, target))
-            
+            if mode == "classification" :
+                total_target = np.concatenate((total_target, target))
+
             x_clone = Variable(x.clone().detach(), requires_grad=True).cuda()
             model_fn = copy.deepcopy(model)
 
             if mode == "segmentation" : 
-                loss_fn = criterion_fn(model_fn(x_clone), y.long())
+                loss_fn = criterion_fn(model_fn(x_clone), y.detach().long())
 
             elif mode == "classification" :
-                loss_fn = criterion_fn(model_fn(x_clone), y)
+                loss_fn = criterion_fn(model_fn(x_clone), y.detach())
 
             optimizer.zero_grad()
             loss_fn.backward()
@@ -140,7 +134,7 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
                 pred= F.softmax(adv_y_pred, dim= 1)
                 _, max_index = torch.max(pred, 1)
                 index_flatten = max_index.view(-1).cpu()
-                target_flatten = target.view(-1).cpu()
+                target_flatten = non_smooth_target.view(-1).cpu()
                 li = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
                 iou = jaccard_score(index_flatten, target_flatten, labels=li, average=None)
                 ious += iou
@@ -152,37 +146,30 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
                 pos_preds = (pos_probs > 0.5).float()
                 adv_loss = criterion_fn(adv_y_pred, y.detach())
                 total_prob = np.concatenate((total_prob, pos_probs.detach().cpu().numpy()))
-                
-#                 tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
-#                 tm1 = len(target) * 20
-#                 acc = tmp/tm1
-#                 sum_total += acc  
-#                 measure = acc
 
             adv_losses += adv_loss.item()
             
             optimizer.zero_grad()
 
             end_time = time.time()
-#             print(" [Validation] [{0}] [{1}/{2}] Adv. Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), adv_loss.item(), end_time-start_time, measure))
             print(" [Validation] [{0}] [{1}/{2}]".format(epoch, i+1, len(val_loader)))
             start_time = time.time()
     else  :
         with torch.no_grad() :
-            for i, (data, target, file_name) in enumerate(val_loader) :
+            for i, (data, target, file_name, non_smooth_target) in enumerate(val_loader) :
                 x = data.cuda()
                 y = target.cuda()
-                
-                total_target = np.concatenate((total_target, target))
-                
+
                 y_pred = model(x)
+                if mode == "classification"
+                    total_target = np.concatenate((total_target, target))
 
                 if mode == "segmentation" : 
                     loss = criterion(y_pred, y.long())
                     pred= F.softmax(y_pred, dim= 1)
                     _, max_index = torch.max(pred, 1)
                     index_flatten = max_index.view(-1).cpu()
-                    target_flatten = target.view(-1).cpu()
+                    target_flatten = non_smooth_target.view(-1).cpu()
                     li = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
                     iou = jaccard_score(index_flatten, target_flatten, labels=li, average=None)
                     ious += iou
@@ -193,37 +180,29 @@ def validate(model, val_loader, criterion, criterion_fn, optimizer, epoch, mode=
                     pos_probs = torch.sigmoid(y_pred)
                     pos_preds = (pos_probs > 0.5).float()
                     total_prob = np.concatenate((total_prob, pos_probs.detach().cpu().numpy()))
-                    
-#                     tmp = torch.eq(pos_preds.cpu(), target.cpu()).sum().item()
-#                     tm1 = len(target) * 20
-#                     acc = tmp/tm1
-#                     sum_total += acc  
-#                     measure = acc
 
                 val_loss += (loss)
 
                 end_time = time.time()
-#                 print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i, len(val_loader), loss.item(), end_time-start_time, measure))
                 print(" [Validation] [{0}] [{1}/{2}]".format(epoch, i+1, len(val_loader)))
                 start_time = time.time()
 
 
     if args.method != 'adv' :
         val_loss = val_loss / len(val_loader)
-#         mean_total = sum_total / len(val_loader)
-        mean_total = average_precision_score(total_target, total_prob)
         if mode == "segmentation" : 
             mean_total = ious 
-        print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i+1, len(val_loader), val_loss, end_time - start_time, mean_total))
+        else :
+            mean_total = average_precision_score(total_target, total_prob)
+        print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i+1, len(val_loader), val_loss, end_time - start_time, end_time - start_time))
         return val_loss, mean_total
 
     else : 
         adv_losses /= len(val_loader)
-#         mean_total = sum_total / len(val_loader)
-        mean_total = average_precision_score(total_target, total_prob)
         if mode == "segmentation" : 
             mean_total = ious 
-        print(" [Validation] [{0}] [{1}/{2}] Losses = [{3:.4f}] Time(Seconds) = [{4:.2f}] Measure [{5:.3f}]".format(epoch, i+1, len(val_loader), adv_losses, end_time - start_time, mean_total))
+        else : 
+            mean_total = average_precision_score(total_target, total_prob)
         return adv_losses, mean_total
     
 def main():
@@ -256,7 +235,7 @@ def main():
             trainset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth = True)
             valset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth = False)
         elif args.tricks == "cut-out" :
-            trainset = dataset.voc_cls(info_path, image_path, cut_out=True, smooth=True)
+            trainset = dataset.voc_cls(info_path, image_path, cut_out=True, smooth=False)
             valset = dataset.voc_cls(info_path, image_path, cut_out=False, smooth=False)
         elif args.tricks == "all" :
             trainset = dataset.voc_cls(info_path, image_path, cut_out=True, smooth =True)
@@ -273,10 +252,10 @@ def main():
 
     if args.tricks == "smooth" or args.tricks == "cut-out" or args.tricks == "all" :
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_train, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
-        testloader = torch.utils.data.DataLoader(valset, batch_size=args.batch_val, shuffle=False, sampler=SubsetRandomSampler(val_idx))
+        testloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_val, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
     else :
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_train, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
-        testloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_val, shuffle=False, sampler=SubsetRandomSampler(val_idx))
+        testloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch_val, shuffle=False, sampler=SubsetRandomSampler(trn_idx))
 
     if args.mode == "segmentation" :
         net = Unet2D((3, 256, 256), 1, 0.1, num_classes=21)
@@ -328,11 +307,11 @@ def main():
 
 if __name__ == '__main__':
     tr_loss, tr_acc, val_loss, val_acc = main()
-    try :
-        torch.save(tr_loss, args.mode + args.method + str(args.epochs) + "Trainloss.pkl")
-        torch.save(tr_acc, args.mode + args.method + str(args.epochs) + "Trainacc.pkl")
-        torch.save(val_loss, args.mode + args.method + str(args.epochs) + "Validation.pkl")
-        torch.save(val_acc, args.mode + args.method + str(args.epochs) + "Validation_acc.pkl")
+    try:
+        torch.save(tr_loss, '/data1/workspace/geongyu/deep_lr_prj/{}-{}-{}/{}-{}-{}-Trainloss.pkl'.format(args.mode, args.method, args.tricks, args.mode, args.method, str(args.epochs)))
+        torch.save(tr_acc, '/data1/workspace/geongyu/deep_lr_prj/{}-{}-{}/{}-{}-{}-Trainacc.pkl'.format(args.mode, args.method, args.tricks, args.mode, args.method, str(args.epochs)))
+        torch.save(val_loss, '/data1/workspace/geongyu/deep_lr_prj/{}-{}-{}/{}-{}-{}-Validloss.pkl'.format(args.mode, args.method, args.tricks, args.mode, args.method, str(args.epochs)))
+        torch.save(val_acc, '/data1/workspace/geongyu/deep_lr_prj/{}-{}-{}/{}-{}-{}-Validacc.pkl'.format(args.mode, args.method, args.tricks, args.mode, args.method, str(args.epochs)))
     except : 
         import ipdb; ipdb.set_trace()
     
