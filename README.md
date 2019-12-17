@@ -13,17 +13,6 @@ Semester: Fall
 | 19510101 | Geongyu Lee | 
 | 19512024 | Sohee Ha |
 
-
-## Dependency 
-
-- torch 
-- argparse
-- torchvision
-- medpy
-- sklearn
-- from torchvision.datasets import VOCSegmentation (Images should be downloaded for the first time.)
-
-
 ## Data Sets Statistics 
 
 | Classes | Images | Objects |
