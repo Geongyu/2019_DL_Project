@@ -67,6 +67,16 @@ Semester: Fall
 | label smoothing + cut-out | 		 |  		 | 
 
 
+## Segmentation Results
+
+![result_50_eopch_Segmentation_Smoothing_0](https://user-images.githubusercontent.com/37532168/70983492-30280d00-20fc-11ea-8a1a-26460f89b2ab.png)
+![result_50_eopch_Segmentation Baseline_0](https://user-images.githubusercontent.com/37532168/70983494-30280d00-20fc-11ea-9bee-588824d72bc3.png)
+![result_50_eopch_Segmentation_ADV_0](https://user-images.githubusercontent.com/37532168/70983495-30c0a380-20fc-11ea-8ed1-7deb2fb96e46.png)
+![result_50_eopch_Segmentation_ADV_CutOut_0](https://user-images.githubusercontent.com/37532168/70983497-30c0a380-20fc-11ea-87dd-079f05ce3bdb.png)
+![result_50_eopch_Segmentation_ADV_Smooth_0](https://user-images.githubusercontent.com/37532168/70983498-30c0a380-20fc-11ea-891e-33afc0913fc2.png)
+![result_50_eopch_Segmentation_CutOut_0](https://user-images.githubusercontent.com/37532168/70983499-30c0a380-20fc-11ea-8457-98b36b6635f9.png)
+
+
 ## Future Work 
 
 - Pre-Trainied 모델로 학습
